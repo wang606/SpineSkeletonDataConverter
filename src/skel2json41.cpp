@@ -291,7 +291,10 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
             attachment["width"] = readFloat(input);
             attachment["height"] = readFloat(input);
             attachment["color"] = readColor(input, true);
-            attachment["sequence"] = readSequence(input);
+            json sequence = readSequence(input);
+            if (!sequence.empty()) {
+                attachment["sequence"] = sequence;
+            }
             return attachment; 
         }
         case AttachmentType_BoundingBox: {
@@ -323,7 +326,10 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
             readVertices(input, vertices, bones, vertexCount);
             attachment["vertices"] = combineBonesAndVertices(bones, vertices);
             attachment["hull"] = readVarint(input, true);
-            attachment["sequence"] = readSequence(input);
+            json sequence = readSequence(input);
+            if (!sequence.empty()) {
+                attachment["sequence"] = sequence;
+            }
             if (nonessential) {
                 std::vector<unsigned short> edges;
                 readShortArray(input, edges);
@@ -341,7 +347,10 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
             attachment["skin"] = readStringRef(input, root);
             attachment["parent"] = readStringRef(input, root);
             attachment["timelines"] = int(readBoolean(input)); 
-            attachment["sequence"] = readSequence(input);
+            json sequence = readSequence(input);
+            if (!sequence.empty()) {
+                attachment["sequence"] = sequence;
+            }
             if (nonessential) {
                 attachment["width"] = readFloat(input);
                 attachment["height"] = readFloat(input);

@@ -210,16 +210,6 @@ std::string readStringRef(DataInput* input, const json& root) {
     return (index == 0) ? "" : root["strings"][index - 1];
 }
 
-json readSequence(DataInput* input) {
-    if (!readBoolean(input)) return json::object();
-    json sequence = json::object(); 
-    sequence["count"] = readVarint(input, true);
-    sequence["start"] = readVarint(input, true);
-    sequence["digits"] = readVarint(input, true);
-    sequence["setupIndex"] = readVarint(input, true);
-    return sequence;
-}
-
 void readFloatArray(DataInput* input, int n, std::vector<float>& array) {
     array.resize(n);
     for (int i = 0; i < n; i++) {
