@@ -22,6 +22,7 @@ add_test_skel2json_library(42)
 
 add_executable(skel2json
     "src/json.hpp"
+    "src/jsonformat.hpp"
     "src/main.cpp"
     "src/skel2json37.cpp"
     "src/skel2json38.cpp"

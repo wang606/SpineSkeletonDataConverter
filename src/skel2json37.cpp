@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 #include "json.hpp"
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
+#include "jsonformat.hpp"
 
 namespace spine37 {
 
@@ -344,7 +345,7 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
         }
         case AttachmentType_Clipping: {
             int endSlotIndex = readVarint(input, true);
-            attachment["end"] = root["slots"][endSlotIndex]["name"];
+            attachment["end"] = root["slots"][endSlotIndex]["name"].get<std::string>();
             int vertexCount = readVarint(input, true); 
             std::vector<float> vertices; 
             std::vector<int> bones; 
@@ -368,11 +369,12 @@ json readSkin(DataInput* input, const json& root, bool nonessential) {
     json skin = json::object();
     for (int i = 0; i < slotCount; i++) {
         int slotIndex = readVarint(input, true);
-        skin[root["slots"][slotIndex]["name"]] = json::object();
+        std::string slotName = root["slots"][slotIndex]["name"].get<std::string>();
+        skin[slotName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ++ii) {
             std::string name = readString(input);
             json attachment = readAttachment(input, skin, slotIndex, name, root, nonessential);
-            skin[root["slots"][slotIndex]["name"]][name] = attachment;
+            skin[slotName][name] = attachment;
         }
     }
     return skin;
@@ -413,7 +415,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
     animation["slots"] = json::object(); 
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         int slotIndex = readVarint(input, true); 
-        std::string slotName = root["slots"][slotIndex]["name"];
+        std::string slotName = root["slots"][slotIndex]["name"].get<std::string>();
         animation["slots"][slotName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             unsigned char timelineType = readByte(input);
@@ -468,7 +470,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
     animation["bones"] = json::object();
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         int boneIndex = readVarint(input, true);
-        std::string boneName = root["bones"][boneIndex]["name"];
+        std::string boneName = root["bones"][boneIndex]["name"].get<std::string>();
         animation["bones"][boneName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             unsigned char timelineType = readByte(input); 
@@ -571,7 +573,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
         animation["deform"][skinName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             int slotIndex = readVarint(input, true); 
-            std::string slotName = root["slots"][slotIndex]["name"];
+            std::string slotName = root["slots"][slotIndex]["name"].get<std::string>();
             animation["deform"][skinName][slotName] = json::object();
             for (int iii = 0, nnn = readVarint(input, true); iii < nnn; iii++) {
                 std::string attachmentName = readString(input);
@@ -617,7 +619,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
             for (size_t ii = 0; ii < offsetCount; ii++) {
                 animation["drawOrder"].back()["offsets"].push_back(json::object());
                 size_t slotIndex = (size_t) readVarint(input, true);
-                animation["drawOrder"].back()["offsets"].back()["slot"] = root["slots"][slotIndex]["name"];
+                animation["drawOrder"].back()["offsets"].back()["slot"] = root["slots"][slotIndex]["name"].get<std::string>();
                 while (originalIndex != slotIndex)
                     unchanged[unchangedIndex++] = (int) originalIndex++;
                 int offset = readVarint(input, true);
@@ -645,7 +647,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
             animation["events"].back()["float"] = readFloat(input);
             if (readBoolean(input))
                 animation["events"].back()["string"] = readString(input);
-            if (!std::string(root["events"][animation["events"].back()["name"]]["audio"]).empty()) {
+            if (!std::string(root["events"][animation["events"].back()["name"].get<std::string>()]["audio"]).empty()) {
                 animation["events"].back()["volume"] = readFloat(input);
                 animation["events"].back()["balance"] = readFloat(input); 
             }
@@ -888,7 +890,7 @@ bool skel2json37(const std::string& skelPath, const std::string& jsonPath) {
         std::cerr << "Failed to open output file: " << jsonPath << std::endl;
         return false;
     }
-    outputFile << root << std::endl;
+    outputFile << customDump(root) << std::endl;
     outputFile.close();
 
     return true;

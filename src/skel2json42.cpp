@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 #include "json.hpp"
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
+#include "jsonformat.hpp"
 
 namespace spine42 {
 
@@ -279,16 +280,30 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
     attachment["type"] = AttachmentType[type];
     switch (type) {
         case AttachmentType_Region: {
-            attachment["path"] = (flags & 16) != 0 ? readStringRef(input, root) : name; 
-            if ((flags & 32) != 0) attachment["color"] = readColor(input, true);
+            std::string path = (flags & 16) != 0 ? readStringRef(input, root) : name;
+            if (path != name) attachment["path"] = path;
+            
+            if ((flags & 32) != 0) {
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
+            }
             if ((flags & 64) != 0) attachment["sequence"] = readSequence(input);
-            attachment["rotation"] = (flags & 128) != 0 ? readFloat(input) : 0.0f;
-            attachment["x"] = readFloat(input);
-            attachment["y"] = readFloat(input);
-            attachment["scaleX"] = readFloat(input);
-            attachment["scaleY"] = readFloat(input);
-            attachment["width"] = readFloat(input);
-            attachment["height"] = readFloat(input);
+            
+            float rotation = (flags & 128) != 0 ? readFloat(input) : 0.0f;
+            float x = readFloat(input);
+            float y = readFloat(input);
+            float scaleX = readFloat(input);
+            float scaleY = readFloat(input);
+            float width = readFloat(input);
+            float height = readFloat(input);
+            
+            if (rotation != 0.0f) attachment["rotation"] = rotation;
+            if (x != 0.0f) attachment["x"] = x;
+            if (y != 0.0f) attachment["y"] = y;
+            if (scaleX != 1.0f) attachment["scaleX"] = scaleX;
+            if (scaleY != 1.0f) attachment["scaleY"] = scaleY;
+            if (width != 32.0f) attachment["width"] = width;
+            if (height != 32.0f) attachment["height"] = height;
             return attachment; 
         }
         case AttachmentType_BoundingBox: {
@@ -298,13 +313,19 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
             attachment["vertexCount"] = verticesLength >> 1; 
             attachment["vertices"] = combineBonesAndVertices(bones, vertices);
             if (nonessential) {
-                attachment["color"] = readColor(input, true);
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
             }
             return attachment; 
         }
         case AttachmentType_Mesh: {
-            attachment["path"] = (flags & 16) != 0 ? readStringRef(input, root) : name; 
-            if ((flags & 32) != 0) attachment["color"] = readColor(input, true);
+            std::string path = (flags & 16) != 0 ? readStringRef(input, root) : name;
+            if (path != name) attachment["path"] = path;
+            
+            if ((flags & 32) != 0) {
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
+            }
             if ((flags & 64) != 0) attachment["sequence"] = readSequence(input);
             int hullLength = readVarint(input, true);
             attachment["hull"] = hullLength;
@@ -322,27 +343,43 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
             if (nonessential) {
                 readShortArray(input, edges, readVarint(input, true));
                 attachment["edges"] = edges;
-                attachment["width"] = readFloat(input);
-                attachment["height"] = readFloat(input);
+                float width = readFloat(input);
+                float height = readFloat(input);
+                if (width != 32.0f) attachment["width"] = width;
+                if (height != 32.0f) attachment["height"] = height;
             }
             return attachment; 
         }
         case AttachmentType_LinkedMesh: {
-            attachment["path"] = (flags & 16) != 0 ? readStringRef(input, root) : name;
-            if ((flags & 32) != 0) attachment["color"] = readColor(input, true);
+            std::string path = (flags & 16) != 0 ? readStringRef(input, root) : name;
+            if (path != name) attachment["path"] = path;
+            
+            if ((flags & 32) != 0) {
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
+            }
             if ((flags & 64) != 0) attachment["sequence"] = readSequence(input);
-            attachment["timelines"] = int((flags & 128) != 0);
+            
+            bool timelines = (flags & 128) != 0;
+            if (!timelines) attachment["timelines"] = timelines;
+            
             attachment["skinIndex"] = readVarint(input, true); // TODO
             attachment["parent"] = readStringRef(input, root); 
             if (nonessential) {
-                attachment["width"] = readFloat(input);
-                attachment["height"] = readFloat(input);
+                float width = readFloat(input);
+                float height = readFloat(input);
+                if (width != 32.0f) attachment["width"] = width;
+                if (height != 32.0f) attachment["height"] = height;
             }
             return attachment;
         }
         case AttachmentType_Path: {
-            attachment["closed"] = int((flags & 16) != 0);
-            attachment["constantSpeed"] = int((flags & 32) != 0);
+            bool closed = (flags & 16) != 0;
+            bool constantSpeed = (flags & 32) != 0;
+            
+            if (closed) attachment["closed"] = closed;
+            if (!constantSpeed) attachment["constantSpeed"] = constantSpeed;
+            
             std::vector<float> vertices; 
             std::vector<int> bones; 
             int verticesLength = readVertices(input, vertices, bones, (flags & 64) != 0);
@@ -355,29 +392,37 @@ json readAttachment(DataInput* input, const json& skin, int slotIndex, const std
             }
             attachment["lengths"] = lengths;
             if (nonessential) {
-                attachment["color"] = readColor(input, true);
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
             }
             return attachment;
         }
         case AttachmentType_Point: {
-            attachment["rotation"] = readFloat(input); 
-            attachment["x"] = readFloat(input);
-            attachment["y"] = readFloat(input);
+            float rotation = readFloat(input);
+            float x = readFloat(input);
+            float y = readFloat(input);
+            
+            if (rotation != 0.0f) attachment["rotation"] = rotation;
+            if (x != 0.0f) attachment["x"] = x;
+            if (y != 0.0f) attachment["y"] = y;
+            
             if (nonessential) {
-                attachment["color"] = readColor(input, true);
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
             }
             return attachment;
         }
         case AttachmentType_Clipping: {
             int endSlotIndex = readVarint(input, true);
-            attachment["end"] = root["slots"][endSlotIndex]["name"];
+            attachment["end"] = root["slots"][endSlotIndex]["name"].get<std::string>();
             std::vector<float> vertices; 
             std::vector<int> bones; 
             int verticesLength = readVertices(input, vertices, bones, (flags & 16) != 0);
             attachment["vertexCount"] = verticesLength >> 1;
             attachment["vertices"] = combineBonesAndVertices(bones, vertices);
             if (nonessential) {
-                attachment["color"] = readColor(input, true);
+                std::string color = readColor(input, true);
+                if (color != "ffffffff") attachment["color"] = color;
             }
             return attachment;
         }
@@ -397,7 +442,7 @@ json readSkin(DataInput* input, bool defaultSkin, const json& root, bool nonesse
         if (nonessential) skin["color"] = readColor(input, true);
         for (int i = 0, n = readVarint(input, true); i < n; i++) {
             int boneIndex = readVarint(input, true);
-            skin["bones"].push_back(root["bones"][boneIndex]["name"]);
+            skin["bones"].push_back(root["bones"][boneIndex]["name"].get<std::string>());
         }
         for (int i = 0, n = readVarint(input, true); i < n; i++) {
             int ikIndex = readVarint(input, true);
@@ -420,11 +465,11 @@ json readSkin(DataInput* input, bool defaultSkin, const json& root, bool nonesse
     skin["attachments"] = json::object(); 
     for (int i = 0; i < slotCount; i++) {
         int slotIndex = readVarint(input, true);
-        skin["attachments"][root["slots"][slotIndex]["name"]] = json::object();
+        skin["attachments"][root["slots"][slotIndex]["name"].get<std::string>()] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ++ii) {
             std::string name = readStringRef(input, root);
             json attachment = readAttachment(input, skin, slotIndex, name, root, nonessential);
-            skin["attachments"][root["slots"][slotIndex]["name"]][name] = attachment;
+            skin["attachments"][root["slots"][slotIndex]["name"].get<std::string>()][name] = attachment;
         }
     }
     return skin;
@@ -475,7 +520,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
     animation["slots"] = json::object(); 
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         int slotIndex = readVarint(input, true); 
-        std::string slotName = root["slots"][slotIndex]["name"];
+        std::string slotName = root["slots"][slotIndex]["name"].get<std::string>();
         animation["slots"][slotName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             unsigned char timelineType = readByte(input);
@@ -644,7 +689,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
     animation["bones"] = json::object();
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         int boneIndex = readVarint(input, true);
-        std::string boneName = root["bones"][boneIndex]["name"];
+        std::string boneName = root["bones"][boneIndex]["name"].get<std::string>();
         animation["bones"][boneName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             unsigned char timelineType = readByte(input); 
@@ -865,7 +910,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
         animation["attachments"][skinName] = json::object();
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             int slotIndex = readVarint(input, true); 
-            std::string slotName = root["slots"][slotIndex]["name"];
+            std::string slotName = root["slots"][slotIndex]["name"].get<std::string>();
             animation["attachments"][skinName][slotName] = json::object();
             for (int iii = 0, nnn = readVarint(input, true); iii < nnn; iii++) {
                 std::string attachmentName = readStringRef(input, root);
@@ -945,7 +990,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
             for (size_t ii = 0; ii < offsetCount; ii++) {
                 animation["drawOrder"].back()["offsets"].push_back(json::object());
                 size_t slotIndex = (size_t) readVarint(input, true);
-                animation["drawOrder"].back()["offsets"].back()["slot"] = root["slots"][slotIndex]["name"];
+                animation["drawOrder"].back()["offsets"].back()["slot"] = root["slots"][slotIndex]["name"].get<std::string>();
                 while (originalIndex != slotIndex)
                     unchanged[unchangedIndex++] = (int) originalIndex++;
                 int offset = readVarint(input, true);
@@ -977,7 +1022,7 @@ json readAnimation(const std::string& name, DataInput* input, json& root) {
             animation["events"].back()["int"] = intValue;
             animation["events"].back()["float"] = floatValue;
             animation["events"].back()["string"] = stringValue;
-            if (!std::string(root["events"][root["eventNames"][eventIndex]]["audio"]).empty()) {
+            if (!std::string(root["events"][root["eventNames"][eventIndex].get<std::string>()]["audio"]).empty()) {
                 animation["events"].back()["volume"] = readFloat(input);
                 animation["events"].back()["balance"] = readFloat(input); 
             }
@@ -1023,16 +1068,28 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         return false; 
     }
     skeleton["spine"] = version;
-    skeleton["x"] = readFloat(&input);
-    skeleton["y"] = readFloat(&input);
-    skeleton["width"] = readFloat(&input);
-    skeleton["height"] = readFloat(&input);
-    skeleton["referenceScale"] = readFloat(&input);
+    
+    float x = readFloat(&input);
+    float y = readFloat(&input);
+    float width = readFloat(&input);
+    float height = readFloat(&input);
+    float referenceScale = readFloat(&input);
+    
+    if (x != 0.0f) skeleton["x"] = x;
+    if (y != 0.0f) skeleton["y"] = y;
+    if (width != 0.0f) skeleton["width"] = width;
+    if (height != 0.0f) skeleton["height"] = height;
+    if (referenceScale != 100.0f) skeleton["referenceScale"] = referenceScale;
+    
     bool nonessential = readBoolean(&input);
     if (nonessential) {
-        skeleton["fps"] = readFloat(&input);
-        skeleton["images"] = readString(&input);
-        skeleton["audio"] = readString(&input);
+        float fps = readFloat(&input);
+        std::string images = readString(&input);
+        std::string audio = readString(&input);
+        
+        if (fps != 30.0f) skeleton["fps"] = fps;
+        if (!images.empty()) skeleton["images"] = images;
+        if (!audio.empty()) skeleton["audio"] = audio;
     }
     root["skeleton"] = skeleton;
 
@@ -1052,20 +1109,37 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         if (i != 0) {
             bone["parent"] = bones[readVarint(&input, true)]["name"];
         }
-        bone["rotation"] = readFloat(&input);
-        bone["x"] = readFloat(&input);
-        bone["y"] = readFloat(&input);
-        bone["scaleX"] = readFloat(&input);
-        bone["scaleY"] = readFloat(&input);
-        bone["shearX"] = readFloat(&input);
-        bone["shearY"] = readFloat(&input);
-        bone["length"] = readFloat(&input);
-        bone["inherit"] = Inherit[readVarint(&input, true)];
-        bone["skin"] = readBoolean(&input); 
+        
+        float rotation = readFloat(&input);
+        float x = readFloat(&input);
+        float y = readFloat(&input);
+        float scaleX = readFloat(&input);
+        float scaleY = readFloat(&input);
+        float shearX = readFloat(&input);
+        float shearY = readFloat(&input);
+        float length = readFloat(&input);
+        std::string inherit = Inherit[readVarint(&input, true)];
+        bool skin = readBoolean(&input);
+        
+        if (rotation != 0.0f) bone["rotation"] = rotation;
+        if (x != 0.0f) bone["x"] = x;
+        if (y != 0.0f) bone["y"] = y;
+        if (scaleX != 1.0f) bone["scaleX"] = scaleX;
+        if (scaleY != 1.0f) bone["scaleY"] = scaleY;
+        if (shearX != 0.0f) bone["shearX"] = shearX;
+        if (shearY != 0.0f) bone["shearY"] = shearY;
+        if (length != 0.0f) bone["length"] = length;
+        if (inherit != "normal") bone["inherit"] = inherit;
+        if (skin) bone["skin"] = skin;
+        
         if (nonessential) {
-            bone["color"] = readColor(&input, true);
-            bone["icon"] = readString(&input);
-            bone["visible"] = readBoolean(&input);
+            std::string color = readColor(&input, true);
+            std::string icon = readString(&input);
+            bool visible = readBoolean(&input);
+            
+            if (color != "ffffffff") bone["color"] = color;
+            if (!icon.empty()) bone["icon"] = icon;
+            if (!visible) bone["visible"] = visible;
         }
         bones.push_back(bone);
     }
@@ -1084,7 +1158,10 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
             return false;
         }
         slot["bone"] = bones[boneIndex]["name"];
-        slot["color"] = readColor(&input, true); 
+        
+        std::string color = readColor(&input, true);
+        if (color != "ffffffff") slot["color"] = color;
+        
         unsigned char a = readByte(&input);
         unsigned char r = readByte(&input);
         unsigned char g = readByte(&input);
@@ -1092,10 +1169,16 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         if (!(r == 0xff && g == 0xff && b == 0xff && a == 0xff)) {
             slot["dark"] = Color2String({int(r), int(g), int(b), 255}, false);
         }
-        slot["attachment"] = readStringRef(&input, root);
-        slot["blend"] = BlendMode[readVarint(&input, true)];
+        
+        std::string attachment = readStringRef(&input, root);
+        if (!attachment.empty()) slot["attachment"] = attachment;
+        
+        std::string blend = BlendMode[readVarint(&input, true)];
+        if (blend != "normal") slot["blend"] = blend;
+        
         if (nonessential) {
-            slot["visible"] = readBoolean(&input);
+            bool visible = readBoolean(&input);
+            if (!visible) slot["visible"] = visible;
         }
         slots.push_back(slot);
     }
@@ -1108,7 +1191,10 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
     for (int i = 0; i < ikConstraintsCount; i++) {
         json ikConstraint;
         ikConstraint["name"] = readString(&input);
-        ikConstraint["order"] = readVarint(&input, true);
+        
+        int order = readVarint(&input, true);
+        if (order != 0) ikConstraint["order"] = order;
+        
         int boneCount = readVarint(&input, true);
         ikConstraint["bones"] = json::array();
         for (int j = 0; j < boneCount; j++) {
@@ -1121,17 +1207,29 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         }
         ikConstraint["target"] = bones[readVarint(&input, true)]["name"];
         int flags = readByte(&input);
-        ikConstraint["skin"] = (flags & 1) != 0;
-        ikConstraint["bendPositive"] = ((flags & 2) != 0) ? 1 : -1;
-        ikConstraint["compress"] = int((flags & 4) != 0);
-        ikConstraint["stretch"] = int((flags & 8) != 0);
-        ikConstraint["uniform"] = int((flags & 16) != 0);
+        
+        bool skin = (flags & 1) != 0;
+        if (skin) ikConstraint["skin"] = skin;
+        
+        int bendPositive = ((flags & 2) != 0) ? 1 : -1;
+        if (bendPositive == -1) ikConstraint["bendPositive"] = bendPositive;
+        
+        bool compress = (flags & 4) != 0;
+        if (compress) ikConstraint["compress"] = compress;
+        
+        bool stretch = (flags & 8) != 0;
+        if (stretch) ikConstraint["stretch"] = stretch;
+        
+        bool uniform = (flags & 16) != 0;
+        if (uniform) ikConstraint["uniform"] = uniform;
+        
         if ((flags & 32) != 0) {
             float mix = (flags & 64) != 0 ? readFloat(&input) : 1.0f;
-            ikConstraint["mix"] = mix;
+            if (mix != 1.0f) ikConstraint["mix"] = mix;
         }
         if ((flags & 128) != 0) {
-            ikConstraint["softness"] = readFloat(&input);
+            float softness = readFloat(&input);
+            if (softness != 0.0f) ikConstraint["softness"] = softness;
         }
         ikConstraints.push_back(ikConstraint);
     }
@@ -1162,78 +1260,54 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         transformConstraint["relative"] = int((flags & 4) != 0);
         if ((flags & 8) != 0) {
             float rotation = readFloat(&input);
-            if (rotation != 0.0f) {
-                transformConstraint["rotation"] = rotation;
-            }
+            if (rotation != 0.0f) transformConstraint["rotation"] = rotation;
         }
         if ((flags & 16) != 0) {
             float x = readFloat(&input);
-            if (x != 0.0f) {
-                transformConstraint["x"] = x;
-            }
+            if (x != 0.0f) transformConstraint["x"] = x;
         }
         if ((flags & 32) != 0) {
             float y = readFloat(&input);
-            if (y != 0.0f) {
-                transformConstraint["y"] = y;
-            }
+            if (y != 0.0f) transformConstraint["y"] = y;
         }
         if ((flags & 64) != 0) {
             float scaleX = readFloat(&input);
-            if (scaleX != 1.0f) {
-                transformConstraint["scaleX"] = scaleX;
-            }
+            if (scaleX != 1.0f) transformConstraint["scaleX"] = scaleX;
         }
         if ((flags & 128) != 0) {
             float scaleY = readFloat(&input);
-            if (scaleY != 1.0f) {
-                transformConstraint["scaleY"] = scaleY;
-            }
+            if (scaleY != 1.0f) transformConstraint["scaleY"] = scaleY;
         }
         flags = readByte(&input);
         if ((flags & 1) != 0) {
             float shearY = readFloat(&input);
-            if (shearY != 0.0f) {
-                transformConstraint["shearY"] = shearY;
-            }
+            if (shearY != 0.0f) transformConstraint["shearY"] = shearY;
         }
         if ((flags & 2) != 0) {
             float rotateMix = readFloat(&input);
-            if (rotateMix != 1.0f) {
-                transformConstraint["mixRotate"] = rotateMix;
-            }
+            if (rotateMix != 1.0f) transformConstraint["mixRotate"] = rotateMix;
         }
         float mixX; 
         if ((flags & 4) != 0) {
             mixX = readFloat(&input);
-            if (mixX != 1.0f) {
-                transformConstraint["mixX"] = mixX;
-            }
+            if (mixX != 1.0f) transformConstraint["mixX"] = mixX;
         }
         if ((flags & 8) != 0) {
             float mixY = readFloat(&input);
-            if (mixY != mixX) {
-                transformConstraint["mixY"] = mixY;
-            }
+            if (mixY != mixX) transformConstraint["mixY"] = mixY;
         }
         float mixScaleX; 
         if ((flags & 16) != 0) {
             mixScaleX = readFloat(&input);
-            if (mixScaleX != 1.0f) {
-                transformConstraint["mixScaleX"] = mixScaleX;
-            }
+            if (mixScaleX != 1.0f) transformConstraint["mixScaleX"] = mixScaleX;
         }
         if ((flags & 32) != 0) {
             float mixScaleY = readFloat(&input);
-            if (mixScaleY != mixScaleX) {
-                transformConstraint["mixScaleY"] = mixScaleY;
-            }
+            if (mixScaleY != mixScaleX) transformConstraint["mixScaleY"] = mixScaleY;
         }
         if ((flags & 64) != 0) {
             float mixShearY = readFloat(&input);
-            if (mixShearY != 1.0f) {
-                transformConstraint["mixShearY"] = mixShearY;
-            }
+            if (mixShearY != 1.0f) transformConstraint["mixShearY"] = mixShearY;
         }
         transformConstraints.push_back(transformConstraint);
     }
@@ -1246,8 +1320,13 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
     for (int i = 0; i < pathConstraintsCount; ++i) {
         json pathConstraint;
         pathConstraint["name"] = readString(&input);
-        pathConstraint["order"] = readVarint(&input, true);
-        pathConstraint["skin"] = readBoolean(&input);
+        
+        int order = readVarint(&input, true);
+        if (order != 0) pathConstraint["order"] = order;
+        
+        bool skin = readBoolean(&input);
+        if (skin) pathConstraint["skin"] = skin;
+        
         int boneCount = readVarint(&input, true);
         pathConstraint["bones"] = json::array();
         for (int j = 0; j < boneCount; ++j) {
@@ -1260,35 +1339,30 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         }
         pathConstraint["target"] = slots[readVarint(&input, true)]["name"];
         int flags = readByte(&input);
-        pathConstraint["positionMode"] = PositionMode[(flags & 1) ? 1 : 0];
-        pathConstraint["spacingMode"] = SpacingMode[(flags >> 1) & 3];
-        pathConstraint["rotateMode"] = RotateMode[(flags >> 3) & 3];
+        
+        std::string positionMode = PositionMode[(flags & 1) ? 1 : 0];
+        if (positionMode != "fixed") pathConstraint["positionMode"] = positionMode;
+        
+        std::string spacingMode = SpacingMode[(flags >> 1) & 3];
+        if (spacingMode != "length") pathConstraint["spacingMode"] = spacingMode;
+        
+        std::string rotateMode = RotateMode[(flags >> 3) & 3];
+        if (rotateMode != "tangent") pathConstraint["rotateMode"] = rotateMode;
+        
         if ((flags & 128) != 0) {
             float rotation = readFloat(&input);
-            if (rotation != 0.0f) {
-                pathConstraint["rotation"] = rotation;
-            }
+            if (rotation != 0.0f) pathConstraint["rotation"] = rotation;
         }
         float position = readFloat(&input);
-        if (position != 0.0f) {
-            pathConstraint["position"] = position;
-        }
+        if (position != 0.0f) pathConstraint["position"] = position;
         float spacing = readFloat(&input);
-        if (spacing != 0.0f) {
-            pathConstraint["spacing"] = spacing;
-        }
+        if (spacing != 0.0f) pathConstraint["spacing"] = spacing;
         float mixRotate = readFloat(&input);
-        if (mixRotate != 1.0f) {
-            pathConstraint["mixRotate"] = mixRotate;
-        }
+        if (mixRotate != 1.0f) pathConstraint["mixRotate"] = mixRotate;
         float mixX = readFloat(&input);
-        if (mixX != 1.0f) {
-            pathConstraint["mixX"] = mixX;
-        }
+        if (mixX != 1.0f) pathConstraint["mixX"] = mixX;
         float mixY = readFloat(&input);
-        if (mixY != mixX) {
-            pathConstraint["mixY"] = mixY;
-        }
+        if (mixY != mixX) pathConstraint["mixY"] = mixY;
         pathConstraints.push_back(pathConstraint);
     }
     if (!pathConstraints.empty())
@@ -1309,31 +1383,17 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         physicsConstraint["bone"] = bones[boneIndex]["name"];
         int flags = readByte(&input);
         physicsConstraint["skin"] = (flags & 1) != 0;
-        if ((flags & 2) != 0) {
-            physicsConstraint["x"] = readFloat(&input);
-        }
-        if ((flags & 4) != 0) {
-            physicsConstraint["y"] = readFloat(&input);
-        }
-        if ((flags & 8) != 0) {
-            physicsConstraint["rotate"] = readFloat(&input);
-        }
-        if ((flags & 16) != 0) {
-            physicsConstraint["scaleX"] = readFloat(&input);
-        }
-        if ((flags & 32) != 0) {
-            physicsConstraint["shearX"] = readFloat(&input);
-        }
-        if ((flags & 64) != 0) {
-            physicsConstraint["limit"] = readFloat(&input);
-        }
+        if ((flags & 2) != 0) physicsConstraint["x"] = readFloat(&input);
+        if ((flags & 4) != 0) physicsConstraint["y"] = readFloat(&input);
+        if ((flags & 8) != 0) physicsConstraint["rotate"] = readFloat(&input);
+        if ((flags & 16) != 0) physicsConstraint["scaleX"] = readFloat(&input);
+        if ((flags & 32) != 0) physicsConstraint["shearX"] = readFloat(&input);
+        if ((flags & 64) != 0) physicsConstraint["limit"] = readFloat(&input);
         physicsConstraint["fps"] = readByte(&input);
         physicsConstraint["inertia"] = readFloat(&input);
         physicsConstraint["strength"] = readFloat(&input);
         physicsConstraint["damping"] = readFloat(&input);
-        if ((flags & 128) != 0) {
-            physicsConstraint["mass"] = 1.0f / readFloat(&input);
-        }
+        if ((flags & 128) != 0) physicsConstraint["mass"] = 1.0f / readFloat(&input);
         physicsConstraint["wind"] = readFloat(&input);
         physicsConstraint["gravity"] = readFloat(&input);
         flags = readByte(&input);
@@ -1344,9 +1404,7 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         if ((flags & 16) != 0) physicsConstraint["windGlobal"] = true;
         if ((flags & 32) != 0) physicsConstraint["gravityGlobal"] = true;
         if ((flags & 64) != 0) physicsConstraint["mixGlobal"] = true;
-        if ((flags & 128) != 0) {
-            physicsConstraint["mix"] = readFloat(&input);
-        }
+        if ((flags & 128) != 0) physicsConstraint["mix"] = readFloat(&input);
         physicsConstraints.push_back(physicsConstraint);
     }
     if (!physicsConstraints.empty())
@@ -1415,7 +1473,7 @@ bool skel2json42(const std::string& skelPath, const std::string& jsonPath) {
         std::cerr << "Failed to open output file: " << jsonPath << std::endl;
         return false;
     }
-    outputFile << root << std::endl;
+    outputFile << customDump(root) << std::endl;
     outputFile.close();
 
     return true;
