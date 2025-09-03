@@ -1,3 +1,4 @@
+.vscode
 build
-target
-__pycache__
+data
+spine
