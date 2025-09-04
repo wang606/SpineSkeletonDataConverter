@@ -131,28 +131,30 @@ struct Sequence {
     int setupIndex = 0; 
 }; 
 
+typedef std::optional<Color> OptColor; 
+typedef std::optional<Sequence> OptSequence;
+
 struct RegionAttachment {
     float x = 0.0f, y = 0.0f, rotation = 0.0f, scaleX = 1.0f, scaleY = 1.0f, width = 32.0f, height = 32.0f; 
-    Color color; 
-    std::optional<Sequence> sequence = std::nullopt; 
+    OptColor color = std::nullopt; 
+    OptSequence sequence = std::nullopt; 
 }; 
 
 struct MeshAttachment {
     float width = 32.0f, height = 32.0f; 
-    Color color;
-    std::optional<Sequence> sequence = std::nullopt; 
+    OptColor color = std::nullopt;
+    OptSequence sequence = std::nullopt; 
     int hullLength = 0; 
     std::vector<float> uvs; 
     std::vector<unsigned short> triangles; 
     std::vector<unsigned short> edges; 
-    std::vector<int> bones;
     std::vector<float> vertices; // [TODO]: 把 bones 和 vertices 直接合并为一个 vertices （拆分这两者是运行时的工作，数据层面就是一个数组）
 }; 
 
 struct LinkedmeshAttachment {
     float width = 32.0f, height = 32.0f; 
-    Color color;
-    std::optional<Sequence> sequence = std::nullopt; 
+    OptColor color = std::nullopt;
+    OptSequence sequence = std::nullopt; 
     std::string parentMesh; 
     int timelines = 1; 
     OptStr skin = std::nullopt; 
@@ -160,32 +162,29 @@ struct LinkedmeshAttachment {
 
 struct BoundingboxAttachment {
     int vertexCount = 0; 
-    std::vector<int> bones;
     std::vector<float> vertices;
-    Color color;
+    OptColor color = std::nullopt;
 }; 
 
 struct PathAttachment {
     int vertexCount = 0; 
-    std::vector<int> bones;
     std::vector<float> vertices;
     std::vector<float> lengths;
     bool closed = false;
     bool constantSpeed = true;
-    Color color;
+    OptColor color = std::nullopt;
 }; 
 
 struct PointAttachment {
     float x = 0.0f, y = 0.0f, rotation = 0.0f;
-    Color color;
+    OptColor color = std::nullopt;
 }; 
 
 struct ClippingAttachment {
     int vertexCount = 0; 
-    std::vector<int> bones;
     std::vector<float> vertices;
     OptStr endSlot = std::nullopt;
-    Color color;
+    OptColor color = std::nullopt;
 }; 
 
 struct Attachment {
@@ -208,7 +207,7 @@ struct TimelineFrame {
     OptStr str1 = std::nullopt, str2 = std::nullopt; 
     int int1 = 0; 
     float value1 = 0.0f, value2 = 0.0f, value3 = 0.0f, value4 = 0.0f, value5 = 0.0f, value6 = 0.0f; 
-    Color color1, color2;
+    OptColor color1 = std::nullopt, color2 = std::nullopt;
     CurveType curveType = CurveType::CURVE_LINEAR; 
     std::vector<float> curve; 
 
@@ -231,7 +230,7 @@ struct BoneData {
     float x = 0, y = 0, rotation = 0, scaleX = 1, scaleY = 1, shearX = 0, shearY = 0; 
     Inherit inherit = Inherit_Normal;
     bool skinRequired = false; 
-    Color color = { 0x9b, 0x9b, 0x9b, 0xff };
+    OptColor color = std::nullopt; // Color { 0x9b, 0x9b, 0x9b, 0xff };
     std::string icon = ""; 
     bool visible = true; 
 }; 
@@ -239,9 +238,8 @@ struct BoneData {
 struct SlotData {
     OptStr name = std::nullopt; 
     OptStr bone = std::nullopt; 
-    Color color;
-    Color darkColor;
-    bool hasDarkColor = false; 
+    OptColor color = std::nullopt;
+    OptColor darkColor = std::nullopt;
     OptStr attachmentName = std::nullopt; 
     BlendMode blendMode = BlendMode_Normal; 
     bool visible = true; 

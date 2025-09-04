@@ -78,24 +78,6 @@ Sequence readSequence(const Json& j) {
     return sequence;
 }
 
-void readVertices(const Json& j, size_t verticesLength, std::vector<int>& bones, std::vector<float>& vertices) {
-    std::vector<float> rawVertices = j.value("vertices", std::vector<float>{});
-    if (rawVertices.size() == verticesLength) {
-        vertices = std::move(rawVertices);
-        return; 
-    }
-    for (size_t i = 0, n = rawVertices.size(); i < n; ) {
-        int boneCount = (int) rawVertices[i++]; 
-        bones.push_back(boneCount);
-        for (size_t nn = i + boneCount * 4; i < nn; i += 4) {
-            bones.push_back((int) rawVertices[i]);
-            vertices.push_back(rawVertices[i + 1]);
-            vertices.push_back(rawVertices[i + 2]);
-            vertices.push_back(rawVertices[i + 3]);
-        }
-    }
-}
-
 void readCurve(const Json& j, TimelineFrame& frame) {
     if (j.contains("curve")) {
         if (j["curve"] == "stepped") {
@@ -147,7 +129,7 @@ SkeletonData readJsonData(const Json& j) {
         boneData.shearX = boneJson.value("shearX", 0.0f);
         boneData.shearY = boneJson.value("shearY", 0.0f);
         boneData.inherit = inheritMap.at(boneJson.value("inherit", "normal"));
-        boneData.skinRequired = boneJson.value("skinRequired", false);
+        boneData.skinRequired = boneJson.value("skin", false);
         if (boneJson.contains("color")) boneData.color = stringToColor(boneJson["color"], true);
         boneData.icon = boneJson.value("icon", "");
         boneData.visible = boneJson.value("visible", true);
@@ -160,10 +142,7 @@ SkeletonData readJsonData(const Json& j) {
         slotData.name = slotJson.contains("name") ? std::optional<std::string>(slotJson["name"]) : std::nullopt;
         slotData.bone = slotJson.contains("bone") ? std::optional<std::string>(slotJson["bone"]) : std::nullopt;
         if (slotJson.contains("color")) slotData.color = stringToColor(slotJson["color"], true);
-        if (slotJson.contains("dark")) {
-            slotData.darkColor = stringToColor(slotJson["darkColor"], false);
-            slotData.hasDarkColor = true; 
-        }
+        if (slotJson.contains("dark")) {slotData.darkColor = stringToColor(slotJson["darkColor"], false);
         if (slotJson.contains("attachment")) slotData.attachmentName = slotJson["attachment"];
         slotData.blendMode = blendModeMap.at(slotJson.value("blendMode", "normal"));
         slotData.visible = slotJson.value("visible", true);
@@ -281,75 +260,82 @@ SkeletonData readJsonData(const Json& j) {
                     attachment.path = attachmentJson.value("path", attachment.name);
                     attachment.type = attachmentTypeMap.at(attachmentJson.value("type", "region"));
                     switch (attachment.type) {
-                    case AttachmentType_Region: {
-                        RegionAttachment region;
-                        region.x = attachmentJson.value("x", 0.0f);
-                        region.y = attachmentJson.value("y", 0.0f);
-                        region.rotation = attachmentJson.value("rotation", 0.0f);
-                        region.scaleX = attachmentJson.value("scaleX", 1.0f);
-                        region.scaleY = attachmentJson.value("scaleY", 1.0f);
-                        region.width = attachmentJson.value("width", 32.0f);
-                        region.height = attachmentJson.value("height", 32.0f);
-                        if (attachmentJson.contains("color")) region.color = stringToColor(attachmentJson["color"], true);
-                        if (attachmentJson.contains("sequence")) region.sequence = readSequence(attachmentJson["sequence"]);
-                        attachment.data = region;
-                    }
-                    case AttachmentType_Mesh: {
-                        MeshAttachment mesh;
-                        mesh.width = attachmentJson.value("width", 32.0f);
-                        mesh.height = attachmentJson.value("height", 32.0f);
-                        if (attachmentJson.contains("color")) mesh.color = stringToColor(attachmentJson["color"], true);
-                        if (attachmentJson.contains("sequence")) mesh.sequence = readSequence(attachmentJson["sequence"]);
-                        mesh.hullLength = attachmentJson.value("hull", 0);
-                        mesh.triangles = attachmentJson.value("triangles", std::vector<unsigned short>{});
-                        mesh.edges = attachmentJson.value("edges", std::vector<unsigned short>{});
-                        mesh.uvs = attachmentJson.value("uvs", std::vector<float>{});
-                        readVertices(attachmentJson, mesh.uvs.size(), mesh.bones, mesh.vertices);
-                        attachment.data = mesh;
-                    }
-                    case AttachmentType_Linkedmesh: {
-                        LinkedmeshAttachment linkedMesh;
-                        linkedMesh.width = attachmentJson.value("width", 32.0f);
-                        linkedMesh.height = attachmentJson.value("height", 32.0f);
-                        if (attachmentJson.contains("color")) linkedMesh.color = stringToColor(attachmentJson["color"], true);
-                        if (attachmentJson.contains("sequence")) linkedMesh.sequence = readSequence(attachmentJson["sequence"]);
-                        linkedMesh.parentMesh = attachmentJson["parentMesh"];
-                        linkedMesh.timelines = attachmentJson.value("timelines", 1);
-                        if (attachmentJson.contains("skin")) linkedMesh.skin = attachmentJson["skin"];
-                        attachment.data = linkedMesh;
-                    }
-                    case AttachmentType_Boundingbox: {
-                        BoundingboxAttachment boundingBox;
-                        boundingBox.vertexCount = attachmentJson.value("vertexCount", 0) << 1;
-                        if (attachmentJson.contains("color")) boundingBox.color = stringToColor(attachmentJson["color"], true);
-                        readVertices(attachmentJson, boundingBox.vertexCount, boundingBox.bones, boundingBox.vertices);
-                        attachment.data = boundingBox;
-                    }
-                    case AttachmentType_Path: {
-                        PathAttachment path;
-                        path.vertexCount = attachmentJson.value("vertexCount", 0) << 1;
-                        path.closed = attachmentJson.value("closed", false);
-                        path.constantSpeed = attachmentJson.value("constantSpeed", true);
-                        if (attachmentJson.contains("color")) path.color = stringToColor(attachmentJson["color"], true);
-                        readVertices(attachmentJson, path.vertexCount, path.bones, path.vertices);
-                        path.lengths = attachmentJson.value("lengths", std::vector<float>{});
-                        attachment.data = path;
-                    }
-                    case AttachmentType_Point: {
-                        PointAttachment point;
-                        point.x = attachmentJson.value("x", 0.0f);
-                        point.y = attachmentJson.value("y", 0.0f);
-                        point.rotation = attachmentJson.value("rotation", 0.0f);
-                        if (attachmentJson.contains("color")) point.color = stringToColor(attachmentJson["color"], true);
-                        attachment.data = point;
-                    }
-                    case AttachmentType_Clipping: {
-                        ClippingAttachment clipping;
-                        clipping.vertexCount = attachmentJson.value("vertexCount", 0) << 1;
-                        if (attachmentJson.contains("color")) clipping.color = stringToColor(attachmentJson["color"], true);
-                        if (attachmentJson.contains("end")) clipping.endSlot = attachmentJson["end"];
-                        readVertices(attachmentJson, clipping.vertexCount, clipping.bones, clipping.vertices);
-                        attachment.data = clipping;
+                        case AttachmentType_Region: {
+                            RegionAttachment region;
+                            region.x = attachmentJson.value("x", 0.0f);
+                            region.y = attachmentJson.value("y", 0.0f);
+                            region.rotation = attachmentJson.value("rotation", 0.0f);
+                            region.scaleX = attachmentJson.value("scaleX", 1.0f);
+                            region.scaleY = attachmentJson.value("scaleY", 1.0f);
+                            region.width = attachmentJson.value("width", 32.0f);
+                            region.height = attachmentJson.value("height", 32.0f);
+                            if (attachmentJson.contains("color")) region.color = stringToColor(attachmentJson["color"], true);
+                            if (attachmentJson.contains("sequence")) region.sequence = readSequence(attachmentJson["sequence"]);
+                            attachment.data = region;
+                            break; 
+                        }
+                        case AttachmentType_Mesh: {
+                            MeshAttachment mesh;
+                            mesh.width = attachmentJson.value("width", 32.0f);
+                            mesh.height = attachmentJson.value("height", 32.0f);
+                            if (attachmentJson.contains("color")) mesh.color = stringToColor(attachmentJson["color"], true);
+                            if (attachmentJson.contains("sequence")) mesh.sequence = readSequence(attachmentJson["sequence"]);
+                            mesh.hullLength = attachmentJson.value("hull", 0);
+                            mesh.triangles = attachmentJson.value("triangles", std::vector<unsigned short>{});
+                            mesh.edges = attachmentJson.value("edges", std::vector<unsigned short>{});
+                            mesh.uvs = attachmentJson.value("uvs", std::vector<float>{});
+                            mesh.vertices = attachmentJson.value("vertices", std::vector<float>{});
+                            attachment.data = mesh;
+                            break; 
+                        }
+                        case AttachmentType_Linkedmesh: {
+                            LinkedmeshAttachment linkedMesh;
+                            linkedMesh.width = attachmentJson.value("width", 32.0f);
+                            linkedMesh.height = attachmentJson.value("height", 32.0f);
+                            if (attachmentJson.contains("color")) linkedMesh.color = stringToColor(attachmentJson["color"], true);
+                            if (attachmentJson.contains("sequence")) linkedMesh.sequence = readSequence(attachmentJson["sequence"]);
+                            linkedMesh.parentMesh = attachmentJson["parentMesh"];
+                            linkedMesh.timelines = attachmentJson.value("timelines", 1);
+                            if (attachmentJson.contains("skin")) linkedMesh.skin = attachmentJson["skin"];
+                            attachment.data = linkedMesh;
+                            break; 
+                        }
+                        case AttachmentType_Boundingbox: {
+                            BoundingboxAttachment boundingBox;
+                            boundingBox.vertexCount = attachmentJson.value("vertexCount", 0);
+                            if (attachmentJson.contains("color")) boundingBox.color = stringToColor(attachmentJson["color"], true);
+                            boundingBox.vertices = attachmentJson.value("vertices", std::vector<float>{});
+                            attachment.data = boundingBox;
+                        }
+                        case AttachmentType_Path: {
+                            PathAttachment path;
+                            path.vertexCount = attachmentJson.value("vertexCount", 0);
+                            path.closed = attachmentJson.value("closed", false);
+                            path.constantSpeed = attachmentJson.value("constantSpeed", true);
+                            if (attachmentJson.contains("color")) path.color = stringToColor(attachmentJson["color"], true);
+                            path.vertices = attachmentJson.value("vertices", std::vector<float>{});
+                            path.lengths = attachmentJson.value("lengths", std::vector<float>{});
+                            attachment.data = path;
+                            break; 
+                        }
+                        case AttachmentType_Point: {
+                            PointAttachment point;
+                            point.x = attachmentJson.value("x", 0.0f);
+                            point.y = attachmentJson.value("y", 0.0f);
+                            point.rotation = attachmentJson.value("rotation", 0.0f);
+                            if (attachmentJson.contains("color")) point.color = stringToColor(attachmentJson["color"], true);
+                            attachment.data = point;
+                            break; 
+                        }
+                        case AttachmentType_Clipping: {
+                            ClippingAttachment clipping;
+                            clipping.vertexCount = attachmentJson.value("vertexCount", 0);
+                            if (attachmentJson.contains("color")) clipping.color = stringToColor(attachmentJson["color"], true);
+                            if (attachmentJson.contains("end")) clipping.endSlot = attachmentJson["end"];
+                            clipping.vertices = attachmentJson.value("vertices", std::vector<float>{});
+                            attachment.data = clipping;
+                            break; 
+                        }
                     }
                     skinData.attachments[slotName][attachmentName] = attachment;
                 }
@@ -476,7 +462,7 @@ SkeletonData readJsonData(const Json& j) {
         }
         if (animationJson.contains("ik")) {
             for (const auto& [ikName, ikJson] : animationJson["ik"].items()) {
-                std::vector<TimelineFrame> ikTimeline; 
+                Timeline ikTimeline; 
                 for (const auto& frameJson : ikJson) {
                     TimelineFrame frame;
                     frame.time = frameJson.value("time", 0.0f);
@@ -493,7 +479,7 @@ SkeletonData readJsonData(const Json& j) {
         }
         if (animationJson.contains("transform")) {
             for (const auto& [transformName, transformJson] : animationJson["transform"].items()) {
-                std::vector<TimelineFrame> transformTimeline; 
+                Timeline transformTimeline; 
                 for (const auto& frameJson : transformJson) {
                     TimelineFrame frame;
                     frame.time = frameJson.value("time", 0.0f);
@@ -615,7 +601,7 @@ SkeletonData readJsonData(const Json& j) {
             for (const auto& frameJson : animationJson["events"]) {
                 TimelineFrame frame;
                 frame.time = frameJson.value("time", 0.0f);
-                frame.str1 = frameJson["name"]; 
+                if (frameJson.contains("name")) frame.str1 = frameJson["name"]; 
                 EventData eventData = skeletonData.events[frame.str1.value()]; 
                 frame.int1 = frameJson.value("int", eventData.intValue);
                 frame.value1 = frameJson.value("float", eventData.floatValue);

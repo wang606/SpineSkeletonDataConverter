@@ -1,4 +1,5 @@
 #include "SkeletonData42.h"
+using namespace spine42;
 
 void writeByte(Binary& binary, unsigned char value) {
     binary.push_back(value);
@@ -125,72 +126,8 @@ void writeVertices(Binary& binary, const std::vector<float>& vertices, const std
 
 Binary writeBinaryData(const SkeletonData& skeletonData) {
     Binary binary;
-
-    writeInt(binary, skeletonData.lowHash);
-    writeInt(binary, skeletonData.highHash);
-    writeString(binary, skeletonData.version);
-    writeFloat(binary, skeletonData.x); 
-    writeFloat(binary, skeletonData.y);
-    writeFloat(binary, skeletonData.width);
-    writeFloat(binary, skeletonData.height);
-    writeFloat(binary, skeletonData.referenceScale); 
-    writeBoolean(binary, skeletonData.nonessential); 
-    if (skeletonData.nonessential) {
-        writeFloat(binary, skeletonData.fps); 
-        writeString(binary, skeletonData.imagesPath); 
-        writeString(binary, skeletonData.audioPath);
-    }
-
-    writeVarint(binary, skeletonData.strings.size(), true);
-    for (const std::string& str : skeletonData.strings) {
-        writeString(binary, str);
-    }
-
-    /* Bones */
-    writeVarint(binary, skeletonData.bones.size(), true);
-    for (const BoneData& bone : skeletonData.bones) {
-        writeString(binary, bone.name);
-        if (bone.index != 0) writeVarint(binary, bone.parent, true);
-        writeFloat(binary, bone.rotation);
-        writeFloat(binary, bone.x);
-        writeFloat(binary, bone.y);
-        writeFloat(binary, bone.scaleX);
-        writeFloat(binary, bone.scaleY);
-        writeFloat(binary, bone.shearX);
-        writeFloat(binary, bone.shearY);
-        writeFloat(binary, bone.length);
-        writeVarint(binary, static_cast<int>(bone.inherit), true);
-        writeBoolean(binary, bone.skinRequired);
-        if (skeletonData.nonessential) {
-            writeColor(binary, bone.color);
-            writeString(binary, bone.icon);
-            writeBoolean(binary, bone.visible);
-        }
-    }
-
-    /* Slots */
-    writeVarint(binary, skeletonData.slots.size(), true);
-    for (const SlotData& slot : skeletonData.slots) {
-        writeString(binary, slot.name);
-        writeVarint(binary, slot.boneData, true);
-        writeColor(binary, slot.color);
-        if (slot.hasDarkColor) {
-            writeByte(binary, slot.darkColor.a);
-            writeByte(binary, slot.darkColor.r);
-            writeByte(binary, slot.darkColor.g);
-            writeByte(binary, slot.darkColor.b);
-        } else {
-            writeByte(binary, 0xff);
-            writeByte(binary, 0xff);
-            writeByte(binary, 0xff);
-            writeByte(binary, 0xff);
-        }
-        writeStringRef(binary, slot.attachmentName, skeletonData);
-        writeVarint(binary, static_cast<int>(slot.blendMode), true);
-        if (skeletonData.nonessential) {
-            writeBoolean(binary, slot.visible);
-        }
-    }
+    
+    // TODO
 
     return binary;
 }
