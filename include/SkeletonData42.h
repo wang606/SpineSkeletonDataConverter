@@ -5,12 +5,12 @@
 #include <vector>
 #include "common.h"
 #include "json.hpp"
+using Json = nlohmann::ordered_json;
 
 namespace spine42 {
 
 typedef std::optional<std::string> OptStr;
 typedef std::vector<unsigned char> Binary; 
-using Json = nlohmann::ordered_json;
 
 /* enum */
 
@@ -122,6 +122,12 @@ enum CurveType {
 
 struct Color {
     unsigned char r = 0xff, g = 0xff, b = 0xff, a = 0xff;
+    bool operator==(const Color& other) const {
+        return r == other.r && g == other.g && b == other.b && a == other.a;
+    }
+    bool operator!=(const Color& other) const {
+        return !(*this == other);
+    }
 };
 
 struct Sequence {
@@ -148,7 +154,7 @@ struct MeshAttachment {
     std::vector<float> uvs; 
     std::vector<unsigned short> triangles; 
     std::vector<unsigned short> edges; 
-    std::vector<float> vertices; // [TODO]: 把 bones 和 vertices 直接合并为一个 vertices （拆分这两者是运行时的工作，数据层面就是一个数组）
+    std::vector<float> vertices; 
 }; 
 
 struct LinkedmeshAttachment {
@@ -157,7 +163,8 @@ struct LinkedmeshAttachment {
     OptSequence sequence = std::nullopt; 
     std::string parentMesh; 
     int timelines = 1; 
-    OptStr skin = std::nullopt; 
+    int skinIndex = -1; // temporary field used for binary format reading
+    std::string skin; 
 }; 
 
 struct BoundingboxAttachment {
@@ -231,7 +238,7 @@ struct BoneData {
     Inherit inherit = Inherit_Normal;
     bool skinRequired = false; 
     OptColor color = std::nullopt; // Color { 0x9b, 0x9b, 0x9b, 0xff };
-    std::string icon = ""; 
+    OptStr icon = std::nullopt; 
     bool visible = true; 
 }; 
 
@@ -302,9 +309,11 @@ struct Skin {
     std::vector<std::string> transform;
     std::vector<std::string> path;
     std::vector<std::string> physics;
+    OptColor color = std::nullopt;
 }; 
 
 struct EventData {
+    std::string name = ""; 
     int intValue = 0;
     float floatValue = 0.0f;
     OptStr stringValue = std::nullopt;
@@ -314,6 +323,7 @@ struct EventData {
 }; 
 
 struct Animation {
+    std::string name = "";
     std::map<std::string, MultiTimeline> slots; 
     std::map<std::string, MultiTimeline> bones;
     std::map<std::string, Timeline> ik;
@@ -338,8 +348,8 @@ struct SkeletonData {
     std::vector<BoneData> bones; 
     std::vector<SlotData> slots; 
     std::vector<Skin> skins; 
-    std::map<std::string, EventData> events; 
-    std::map<std::string, Animation> animations; 
+    std::vector<EventData> events; 
+    std::vector<Animation> animations; 
     std::vector<IKConstraintData> ikConstraints; 
     std::vector<TransformConstraintData> transformConstraints; 
     std::vector<PathConstraintData> pathConstraints; 
@@ -347,7 +357,7 @@ struct SkeletonData {
 }; 
 
 SkeletonData readBinaryData(const Binary&);
-Binary writeBinaryData(const SkeletonData&);
+Binary writeBinaryData(SkeletonData&);
 SkeletonData readJsonData(const Json&);
 Json writeJsonData(const SkeletonData&);
 
