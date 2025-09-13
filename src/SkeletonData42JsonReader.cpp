@@ -505,11 +505,11 @@ SkeletonData spine42::readJsonData(const Json& j) {
                         TimelineFrame frame;
                         frame.time = frameJson.value("time", 0.0f);
                         frame.value1 = frameJson.value("mixRotate", 1.0f);
-                        frame.value2 = frameJson.value("mixShearY", 1.0f);
-                        frame.value3 = frameJson.value("mixX", 1.0f); 
-                        frame.value4 = frameJson.value("mixY", frame.value3);
-                        frame.value5 = frameJson.value("mixScaleX", 1.0f);
-                        frame.value6 = frameJson.value("mixScaleY", frame.value5);
+                        frame.value2 = frameJson.value("mixX", 1.0f); 
+                        frame.value3 = frameJson.value("mixY", frame.value2);
+                        frame.value4 = frameJson.value("mixScaleX", 1.0f);
+                        frame.value5 = frameJson.value("mixScaleY", frame.value4);
+                        frame.value6 = frameJson.value("mixShearY", 1.0f);
                         readCurve(frameJson, frame);
                         transformTimeline.push_back(frame);
                     }

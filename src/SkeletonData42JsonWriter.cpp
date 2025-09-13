@@ -474,11 +474,11 @@ Json spine42::writeJsonData(const SkeletonData& skeletonData) {
                     Json frameJson = Json::object();
                     if (frame.time != 0.0f) frameJson["time"] = frame.time;
                     if (frame.value1 != 1.0f) frameJson["mixRotate"] = frame.value1;
-                    if (frame.value2 != 1.0f) frameJson["mixShearY"] = frame.value2;
-                    if (frame.value3 != 1.0f) frameJson["mixX"] = frame.value3;
-                    if (frame.value4 != frame.value3) frameJson["mixY"] = frame.value4;
-                    if (frame.value5 != 1.0f) frameJson["mixScaleX"] = frame.value5;
-                    if (frame.value6 != frame.value5) frameJson["mixScaleY"] = frame.value6;
+                    if (frame.value2 != 1.0f) frameJson["mixX"] = frame.value2;
+                    if (frame.value3 != frame.value2) frameJson["mixY"] = frame.value3;
+                    if (frame.value4 != 1.0f) frameJson["mixScaleX"] = frame.value4;
+                    if (frame.value5 != frame.value4) frameJson["mixScaleY"] = frame.value5;
+                    if (frame.value6 != 1.0f) frameJson["mixShearY"] = frame.value6;
                     writeCurve(frame, frameJson);
                     transformJson.push_back(frameJson);
                 }

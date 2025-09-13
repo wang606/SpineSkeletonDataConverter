@@ -296,7 +296,7 @@ struct PhysicsConstraintData {
     size_t order = 0;
     bool skinRequired = false;
     OptStr bone = std::nullopt;
-    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 1.0f, shearX = 0.0f, limit = 5000.0f;
+    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 0.0f, shearX = 0.0f, limit = 5000.0f;
     float fps = 60.0f, inertia = 1.0f, strength = 100.0f, damping = 1.0f, mass = 1.0f, wind = 0.0f, gravity = 0.0f, mix = 1.0f;
     bool inertiaGlobal = false, strengthGlobal = false, dampingGlobal = false, massGlobal = false, windGlobal = false, gravityGlobal = false, mixGlobal = false;
 };

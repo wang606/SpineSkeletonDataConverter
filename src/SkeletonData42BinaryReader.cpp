@@ -222,6 +222,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                 }
                 case AttachmentType_Boundingbox: {
                     BoundingboxAttachment box;
+                    attachment.path = attachment.name; 
                     int vertexCount = readVertices(input, box.vertices, (flags & 16) != 0);
                     box.vertexCount = vertexCount;
                     if (skeletonData->nonessential) {
@@ -265,6 +266,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                 }
                 case AttachmentType_Path: {
                     PathAttachment path; 
+                    attachment.path = attachment.name; 
                     path.closed = (flags & 16) != 0;
                     path.constantSpeed = (flags & 32) == 0;
                     int vertexCount = readVertices(input, path.vertices, (flags & 64) != 0);
@@ -279,6 +281,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                 }
                 case AttachmentType_Point: {
                     PointAttachment point; 
+                    attachment.path = attachment.name; 
                     point.x = readFloat(input);
                     point.y = readFloat(input);
                     point.rotation = readFloat(input);
@@ -291,6 +294,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                 }
                 case AttachmentType_Clipping: {
                     ClippingAttachment clipping; 
+                    attachment.path = attachment.name; 
                     clipping.endSlot = skeletonData->slots[readVarint(input, true)].name;
                     int vertexCount = readVertices(input, clipping.vertices, (flags & 16) != 0);
                     clipping.vertexCount = vertexCount;
@@ -920,9 +924,9 @@ SkeletonData spine42::readBinaryData(const Binary& binary) {
         if ((flags & 1) != 0) transformData.offsetShearY = readFloat(&input);
         if ((flags & 2) != 0) transformData.mixRotate = readFloat(&input);
         if ((flags & 4) != 0) transformData.mixX = readFloat(&input);
-        if ((flags & 8) != 0) transformData.mixY = readFloat(&input);
+        transformData.mixY = (flags & 8) != 0 ? readFloat(&input) : transformData.mixX;
         if ((flags & 16) != 0) transformData.mixScaleX = readFloat(&input);
-        if ((flags & 32) != 0) transformData.mixScaleY = readFloat(&input);
+        transformData.mixScaleY = (flags & 32) != 0 ? readFloat(&input) : transformData.mixScaleX;
         if ((flags & 64) != 0) transformData.mixShearY = readFloat(&input);
         skeletonData.transformConstraints.push_back(transformData);
     }

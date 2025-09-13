@@ -622,19 +622,19 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         writeVarint(binary, timeline.size() * 6, true);
         writeFloat(binary, timeline[0].time);
         writeFloat(binary, timeline[0].value1);
+        writeFloat(binary, timeline[0].value2);
         writeFloat(binary, timeline[0].value3);
         writeFloat(binary, timeline[0].value4);
         writeFloat(binary, timeline[0].value5);
         writeFloat(binary, timeline[0].value6);
-        writeFloat(binary, timeline[0].value2);
         for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
             writeFloat(binary, timeline[frameIndex].time);
             writeFloat(binary, timeline[frameIndex].value1);
+            writeFloat(binary, timeline[frameIndex].value2);
             writeFloat(binary, timeline[frameIndex].value3);
             writeFloat(binary, timeline[frameIndex].value4);
             writeFloat(binary, timeline[frameIndex].value5);
             writeFloat(binary, timeline[frameIndex].value6);
-            writeFloat(binary, timeline[frameIndex].value2);
             CurveType curveType = timeline[frameIndex - 1].curveType;
             writeSByte(binary, (signed char)curveType);
             if (curveType == CurveType::CURVE_BEZIER) {
