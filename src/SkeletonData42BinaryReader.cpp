@@ -1,6 +1,8 @@
 #include "SkeletonData42.h"
 using namespace spine42;
 
+namespace spine42 {
+
 struct DataInput {
     const unsigned char* cursor;
     const unsigned char* end;
@@ -805,7 +807,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
     return animation; 
 }
 
-SkeletonData spine42::readBinaryData(const Binary& binary) {
+SkeletonData readBinaryData(const Binary& binary) {
     SkeletonData skeletonData;
     DataInput input; 
     input.cursor = binary.data(); 
@@ -1032,4 +1034,6 @@ SkeletonData spine42::readBinaryData(const Binary& binary) {
     }
 
     return skeletonData;
+}
+
 }

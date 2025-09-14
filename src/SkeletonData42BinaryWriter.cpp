@@ -2,7 +2,9 @@
 using namespace spine42;
 #include <set>
 
-static const std::map<std::string, spine42::SlotTimelineType> slotTimelineTypeMap = {
+namespace spine42 {
+
+static const std::map<std::string, SlotTimelineType> slotTimelineTypeMap = {
     {"attachment", SLOT_ATTACHMENT}, 
     {"rgba", SLOT_RGBA}, 
     {"rgb", SLOT_RGB}, 
@@ -11,7 +13,7 @@ static const std::map<std::string, spine42::SlotTimelineType> slotTimelineTypeMa
     {"alpha", SLOT_ALPHA}
 };
 
-static const std::map<std::string, spine42::BoneTimelineType> boneTimelineTypeMap = {
+static const std::map<std::string, BoneTimelineType> boneTimelineTypeMap = {
     {"rotate", BONE_ROTATE}, 
     {"translate", BONE_TRANSLATE}, 
     {"translatex", BONE_TRANSLATEX}, 
@@ -25,13 +27,13 @@ static const std::map<std::string, spine42::BoneTimelineType> boneTimelineTypeMa
     {"inherit", BONE_INHERIT}
 };
 
-static const std::map<std::string, spine42::PathTimelineType> pathTimelineTypeMap = {
+static const std::map<std::string, PathTimelineType> pathTimelineTypeMap = {
     {"position", PATH_POSITION}, 
     {"spacing", PATH_SPACING}, 
     {"mix", PATH_MIX}
 };
 
-static const std::map<std::string, spine42::PhysicsTimelineType> physicsTimelineTypeMap = {
+static const std::map<std::string, PhysicsTimelineType> physicsTimelineTypeMap = {
     {"inertia", PHYSICS_INERTIA}, 
     {"strength", PHYSICS_STRENGTH}, 
     {"damping", PHYSICS_DAMPING}, 
@@ -42,7 +44,7 @@ static const std::map<std::string, spine42::PhysicsTimelineType> physicsTimeline
     {"reset", PHYSICS_RESET}
 };
 
-static const std::map<std::string, spine42::AttachmentTimelineType> attachmentTimelineTypeMap = {
+static const std::map<std::string, AttachmentTimelineType> attachmentTimelineTypeMap = {
     {"deform", ATTACHMENT_DEFORM}, 
     {"sequence", ATTACHMENT_SEQUENCE}
 };
@@ -801,7 +803,7 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
     }
 }
 
-Binary spine42::writeBinaryData(SkeletonData& skeletonData) {
+Binary writeBinaryData(SkeletonData& skeletonData) {
     Binary binary;
     
     writeInt(binary, skeletonData.hash & 0xffffffff); 
@@ -1115,4 +1117,6 @@ Binary spine42::writeBinaryData(SkeletonData& skeletonData) {
     }
 
     return binary;
+}
+
 }

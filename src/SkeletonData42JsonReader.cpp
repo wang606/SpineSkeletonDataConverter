@@ -1,7 +1,9 @@
 #include "SkeletonData42.h"
 using namespace spine42;
 
-static const std::map<std::string, spine42::Inherit> inheritMap = {
+namespace spine42 {
+
+static const std::map<std::string, Inherit> inheritMap = {
     {"normal", Inherit_Normal},
     {"onlyTranslation", Inherit_OnlyTranslation},
     {"noRotationOrReflection", Inherit_NoRotationOrReflection},
@@ -9,32 +11,32 @@ static const std::map<std::string, spine42::Inherit> inheritMap = {
     {"noScaleOrReflection", Inherit_NoScaleOrReflection}
 };
 
-static const std::map<std::string, spine42::BlendMode> blendModeMap = {
+static const std::map<std::string, BlendMode> blendModeMap = {
     {"normal", BlendMode_Normal},
     {"additive", BlendMode_Additive},
     {"multiply", BlendMode_Multiply},
     {"screen", BlendMode_Screen}
 };
 
-static const std::map<std::string, spine42::PositionMode> positionModeMap = {
+static const std::map<std::string, PositionMode> positionModeMap = {
     {"fixed", PositionMode_Fixed},
     {"percent", PositionMode_Percent}
 };
 
-static const std::map<std::string, spine42::SpacingMode> spacingModeMap = {
+static const std::map<std::string, SpacingMode> spacingModeMap = {
     {"length", SpacingMode_Length},
     {"fixed", SpacingMode_Fixed},
     {"percent", SpacingMode_Percent},
     {"proportional", SpacingMode_Proportional}
 };
 
-static const std::map<std::string, spine42::RotateMode> rotateModeMap = {
+static const std::map<std::string, RotateMode> rotateModeMap = {
     {"tangent", RotateMode_Tangent},
     {"chain", RotateMode_Chain},
     {"chainScale", RotateMode_ChainScale}
 };
 
-static const std::map<std::string, spine42::AttachmentType> attachmentTypeMap = {
+static const std::map<std::string, AttachmentType> attachmentTypeMap = {
     {"region", AttachmentType_Region},
     {"boundingbox", AttachmentType_Boundingbox},
     {"mesh", AttachmentType_Mesh},
@@ -44,7 +46,7 @@ static const std::map<std::string, spine42::AttachmentType> attachmentTypeMap = 
     {"clipping", AttachmentType_Clipping}
 };
 
-static const std::map<std::string, spine42::SequenceMode> sequenceModeMap = {
+static const std::map<std::string, SequenceMode> sequenceModeMap = {
     {"hold", SequenceMode::hold},
     {"once", SequenceMode::once},
     {"loop", SequenceMode::loop},
@@ -100,7 +102,7 @@ void readTimeline(const Json& j, Timeline& timeline, int valueNum, const std::st
     }
 }
 
-SkeletonData spine42::readJsonData(const Json& j) {
+SkeletonData readJsonData(const Json& j) {
     SkeletonData skeletonData; 
 
     const auto& skeleton = j["skeleton"];
@@ -648,4 +650,6 @@ SkeletonData spine42::readJsonData(const Json& j) {
     }
 
     return skeletonData;
+}
+
 }

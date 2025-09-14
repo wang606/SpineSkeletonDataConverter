@@ -1,7 +1,9 @@
 #include "SkeletonData42.h"
 using namespace spine42; 
 
-static const std::map<spine42::Inherit, std::string> inheritString = {
+namespace spine42 {
+
+static const std::map<Inherit, std::string> inheritString = {
     { Inherit_Normal, "normal" },
     { Inherit_OnlyTranslation, "onlyTranslation" },
     { Inherit_NoRotationOrReflection, "noRotationOrReflection" },
@@ -9,32 +11,32 @@ static const std::map<spine42::Inherit, std::string> inheritString = {
     { Inherit_NoScaleOrReflection, "noScaleOrReflection" }
 };
 
-static const std::map<spine42::BlendMode, std::string> blendModeString = {
+static const std::map<BlendMode, std::string> blendModeString = {
     { BlendMode_Normal, "normal" },
     { BlendMode_Additive, "additive" },
     { BlendMode_Multiply, "multiply" },
     { BlendMode_Screen, "screen" }
 };
 
-static const std::map<spine42::PositionMode, std::string> positionModeString = {
+static const std::map<PositionMode, std::string> positionModeString = {
     { PositionMode_Fixed, "fixed" },
     { PositionMode_Percent, "percent" }
 };
 
-static const std::map<spine42::SpacingMode, std::string> spacingModeString = {
+static const std::map<SpacingMode, std::string> spacingModeString = {
     { SpacingMode_Length, "length" },
     { SpacingMode_Fixed, "fixed" },
     { SpacingMode_Percent, "percent" },
     { SpacingMode_Proportional, "proportional" }
 };
 
-static const std::map<spine42::RotateMode, std::string> rotateModeString = {
+static const std::map<RotateMode, std::string> rotateModeString = {
     { RotateMode_Tangent, "tangent" },
     { RotateMode_Chain, "chain" },
     { RotateMode_ChainScale, "chainScale" }
 };
 
-static const std::map<spine42::AttachmentType, std::string> attachmentTypeString = {
+static const std::map<AttachmentType, std::string> attachmentTypeString = {
     { AttachmentType_Region, "region" },
     { AttachmentType_Boundingbox, "boundingbox" },
     { AttachmentType_Mesh, "mesh" },
@@ -44,7 +46,7 @@ static const std::map<spine42::AttachmentType, std::string> attachmentTypeString
     { AttachmentType_Clipping, "clipping" }
 };
 
-static const std::map<spine42::SequenceMode, std::string> sequenceModeString = {
+static const std::map<SequenceMode, std::string> sequenceModeString = {
     { SequenceMode::hold, "hold" },
     { SequenceMode::once, "once" },
     { SequenceMode::loop, "loop" },
@@ -94,7 +96,7 @@ void writeTimeline(const std::vector<TimelineFrame>& timeline, Json& j, int valu
     }
 }
 
-Json spine42::writeJsonData(const SkeletonData& skeletonData) {
+Json writeJsonData(const SkeletonData& skeletonData) {
     Json j = Json::object();
 
     Json skeleton = Json::object();
@@ -618,4 +620,6 @@ Json spine42::writeJsonData(const SkeletonData& skeletonData) {
     }
 
     return j;
+}
+
 }

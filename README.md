@@ -17,10 +17,10 @@ A powerful command-line tool for converting Spine skeleton data between differen
 
 |           | 3.7 | 3.8 | 4.0 | 4.1 | 4.2 |
 | --------- | --- | --- | --- | --- | --- |
-| JSON Reader | 🚧 | 🚧 | 🚧 | 🚧 | ✅  |
+| JSON Reader | 🚧 | 🚧 | 🚧 | ✅ | ✅  |
 | JSON Writer | ✅ | ✅ | ✅ | ✅ | ✅  |
 | Binary Reader | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Binary Writer | 🚧 | 🚧 | 🚧 | 🚧 | ✅ |
+| Binary Writer | 🚧 | 🚧 | 🚧 | ✅ | ✅ |
 | Convert to the next version | 🚧 | 🚧 | 🚧 | 🚧 | ❌ |
 | Convert to the previous version | ❌ | 🚧 | 🚧 | 🚧 | 🚧 |
 
