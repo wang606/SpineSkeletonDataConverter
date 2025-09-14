@@ -57,16 +57,6 @@ enum AttachmentType {
     AttachmentType_Clipping
 };
 
-enum SequenceMode {
-    hold = 0,
-    once = 1,
-    loop = 2,
-    pingpong = 3,
-    onceReverse = 4,
-    loopReverse = 5,
-    pingpongReverse = 6
-}; 
-
 enum BoneTimelineType {
     BONE_ROTATE = 0,
     BONE_TRANSLATE = 1,
@@ -119,26 +109,16 @@ struct Color {
     }
 };
 
-struct Sequence {
-    int count = 0; 
-    int start = 1; 
-    int digits = 0; 
-    int setupIndex = 0; 
-}; 
-
 typedef std::optional<Color> OptColor; 
-typedef std::optional<Sequence> OptSequence;
 
 struct RegionAttachment {
     float x = 0.0f, y = 0.0f, rotation = 0.0f, scaleX = 1.0f, scaleY = 1.0f, width = 32.0f, height = 32.0f; 
     OptColor color = std::nullopt; 
-    OptSequence sequence = std::nullopt; 
 }; 
 
 struct MeshAttachment {
     float width = 32.0f, height = 32.0f; 
     OptColor color = std::nullopt;
-    OptSequence sequence = std::nullopt; 
     int hullLength = 0; 
     std::vector<float> uvs; 
     std::vector<unsigned short> triangles; 
@@ -149,7 +129,6 @@ struct MeshAttachment {
 struct LinkedmeshAttachment {
     float width = 32.0f, height = 32.0f; 
     OptColor color = std::nullopt;
-    OptSequence sequence = std::nullopt; 
     std::string parentMesh; 
     int timelines = 1; 
     int skinIndex = -1; // temporary field used for binary format reading
@@ -208,7 +187,6 @@ struct TimelineFrame {
     std::vector<float> curve; 
 
     Inherit inherit = Inherit::Inherit_Normal;
-    SequenceMode sequenceMode = SequenceMode::hold;
     bool bendPositive = true, compress = false, stretch = false; 
     std::vector<float> vertices; 
     std::vector<std::pair<std::string, int>> offsets; 
@@ -307,7 +285,7 @@ struct Animation {
     std::map<std::string, Timeline> ik;
     std::map<std::string, Timeline> transform;
     std::map<std::string, MultiTimeline> path;
-    std::map<std::string, std::map<std::string, std::map<std::string, MultiTimeline>>> attachments;
+    std::map<std::string, std::map<std::string, std::map<std::string, Timeline>>> attachments;
     Timeline drawOrder;
     Timeline events;
 };

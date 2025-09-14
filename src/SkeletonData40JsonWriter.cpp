@@ -46,16 +46,6 @@ static const std::map<AttachmentType, std::string> attachmentTypeString = {
     { AttachmentType_Clipping, "clipping" }
 };
 
-static const std::map<SequenceMode, std::string> sequenceModeString = {
-    { SequenceMode::hold, "hold" },
-    { SequenceMode::once, "once" },
-    { SequenceMode::loop, "loop" },
-    { SequenceMode::pingpong, "pingpong" },
-    { SequenceMode::onceReverse, "onceReverse" },
-    { SequenceMode::loopReverse, "loopReverse" },
-    { SequenceMode::pingpongReverse, "pingpongReverse" }
-};
-
 std::string colorToString(const Color& color, bool hasAlpha) {
     char buffer[9];
     snprintf(buffer, sizeof(buffer), "%02x%02x%02x", 
@@ -66,15 +56,6 @@ std::string colorToString(const Color& color, bool hasAlpha) {
         snprintf(buffer + 6, 3, "%02x", static_cast<int>(color.a));
     }
     return std::string(buffer);
-}
-
-Json writeSequence(const Sequence& sequence) {
-    Json j = Json::object();
-    if (sequence.count != 0) j["count"] = sequence.count;
-    if (sequence.start != 1) j["start"] = sequence.start;
-    if (sequence.digits != 0) j["digits"] = sequence.digits;
-    if (sequence.setupIndex != 0) j["setupIndex"] = sequence.setupIndex;
-    return j;
 }
 
 void writeCurve(const TimelineFrame& frame, Json& j) {
@@ -232,7 +213,6 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                             attachmentJson["width"] = region.width;
                             attachmentJson["height"] = region.height;
                             if (region.color) attachmentJson["color"] = colorToString(region.color.value(), true);
-                            if (region.sequence) attachmentJson["sequence"] = writeSequence(region.sequence.value());
                             break;
                         }
                         case AttachmentType_Mesh: {
@@ -240,7 +220,6 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                             attachmentJson["width"] = mesh.width;
                             attachmentJson["height"] = mesh.height;
                             if (mesh.color) attachmentJson["color"] = colorToString(mesh.color.value(), true);
-                            if (mesh.sequence) attachmentJson["sequence"] = writeSequence(mesh.sequence.value());
                             if (mesh.hullLength != 0) attachmentJson["hull"] = mesh.hullLength;
                             if (!mesh.triangles.empty()) attachmentJson["triangles"] = mesh.triangles;
                             if (!mesh.edges.empty()) attachmentJson["edges"] = mesh.edges;
@@ -253,9 +232,8 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                             attachmentJson["width"] = linkedMesh.width;
                             attachmentJson["height"] = linkedMesh.height;
                             if (linkedMesh.color) attachmentJson["color"] = colorToString(linkedMesh.color.value(), true);
-                            if (linkedMesh.sequence) attachmentJson["sequence"] = writeSequence(linkedMesh.sequence.value());
                             attachmentJson["parent"] = linkedMesh.parentMesh; 
-                            if (linkedMesh.timelines != 1) attachmentJson["timelines"] = linkedMesh.timelines;
+                            if (linkedMesh.timelines != 1) attachmentJson["deform"] = linkedMesh.timelines;
                             attachmentJson["skin"] = linkedMesh.skin;
                             break; 
                         }
@@ -325,6 +303,7 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                         Json frameJson = Json::object();
                         if (frame.time != 0.0f) frameJson["time"] = frame.time;
                         if (frame.str1) frameJson["name"] = frame.str1.value();
+                        else frameJson["name"] = nullptr;
                         slotJson["attachment"].push_back(frameJson);
                     }
                 }
@@ -405,14 +384,6 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                 if (boneMap.contains("sheary")) {
                     writeTimeline(boneMap.at("sheary"), boneJson["sheary"], 1, "value", "", 0.0f);
                 }
-                if (boneMap.contains("inherit")) {
-                    for (const auto& frame : boneMap.at("inherit")) {
-                        Json frameJson = Json::object();
-                        if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                        if (frame.inherit != Inherit_Normal) frameJson["inherit"] = inheritString.at(frame.inherit);
-                        boneJson["inherit"].push_back(frameJson);
-                    }
-                }
                 animationJson["bones"][boneName] = boneJson;
             }
         }
@@ -477,33 +448,19 @@ Json writeJsonData(const SkeletonData& skeletonData) {
         if (!animation.attachments.empty()) {
             for (const auto& [skinName, skinMap] : animation.attachments) {
                 for (const auto& [slotName, slotMap] : skinMap) {
-                    for (const auto& [attachmentName, attachmentMap] : slotMap) {
-                        Json attachmentJson = Json::object();
-                        if (attachmentMap.contains("deform")) {
-                            for (const auto& frame : attachmentMap.at("deform")) {
-                                Json frameJson = Json::object();
-                                if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                                if (!frame.vertices.empty()) {
-                                    if (frame.int1 != 0) frameJson["offset"] = frame.int1; 
-                                    frameJson["vertices"] = frame.vertices; 
-                                }
-                                writeCurve(frame, frameJson); 
-                                attachmentJson["deform"].push_back(frameJson);
+                    for (const auto& [attachmentName, attachmentTimeline] : slotMap) {
+                        Json attachmentJson = Json::array(); 
+                        for (const auto& frame : attachmentTimeline) {
+                            Json frameJson = Json::object();
+                            if (frame.time != 0.0f) frameJson["time"] = frame.time;
+                            if (!frame.vertices.empty()) {
+                                if (frame.int1 != 0) frameJson["offset"] = frame.int1; 
+                                frameJson["vertices"] = frame.vertices; 
                             }
+                            writeCurve(frame, frameJson); 
+                            attachmentJson.push_back(frameJson);
                         }
-                        if (attachmentMap.contains("sequence")) {
-                            float lastDelay = 0.0f; 
-                            for (const auto& frame : attachmentMap.at("sequence")) {
-                                Json frameJson = Json::object();
-                                if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                                if (frame.value1 != lastDelay) frameJson["delay"] = frame.value1; 
-                                lastDelay = frame.value1;
-                                if (frame.int1 != 0) frameJson["index"] = frame.int1;
-                                if (frame.sequenceMode != SequenceMode::hold) frameJson["mode"] = sequenceModeString.at(frame.sequenceMode);
-                                attachmentJson["sequence"].push_back(frameJson);
-                            }
-                        }
-                        animationJson["attachments"][skinName][slotName][attachmentName] = attachmentJson;
+                        animationJson["deform"][skinName][slotName][attachmentName] = attachmentJson;
                     }
                 }
             }

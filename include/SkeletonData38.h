@@ -81,7 +81,8 @@ enum SlotTimelineType {
 };
 
 enum AttachmentTimelineType {
-    ATTACHMENT_DEFORM = 0
+    ATTACHMENT_DEFORM = 0,
+    ATTACHMENT_SEQUENCE = 1
 };
 
 enum PathTimelineType {
@@ -284,7 +285,7 @@ struct Animation {
     std::map<std::string, Timeline> ik;
     std::map<std::string, Timeline> transform;
     std::map<std::string, MultiTimeline> path;
-    std::map<std::string, std::map<std::string, std::map<std::string, MultiTimeline>>> attachments;
+    std::map<std::string, std::map<std::string, std::map<std::string, Timeline>>> attachments;
     Timeline drawOrder;
     Timeline events;
 };

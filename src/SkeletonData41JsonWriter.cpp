@@ -405,14 +405,6 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                 if (boneMap.contains("sheary")) {
                     writeTimeline(boneMap.at("sheary"), boneJson["sheary"], 1, "value", "", 0.0f);
                 }
-                if (boneMap.contains("inherit")) {
-                    for (const auto& frame : boneMap.at("inherit")) {
-                        Json frameJson = Json::object();
-                        if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                        if (frame.inherit != Inherit_Normal) frameJson["inherit"] = inheritString.at(frame.inherit);
-                        boneJson["inherit"].push_back(frameJson);
-                    }
-                }
                 animationJson["bones"][boneName] = boneJson;
             }
         }

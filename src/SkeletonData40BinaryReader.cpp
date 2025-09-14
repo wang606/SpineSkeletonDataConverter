@@ -85,16 +85,6 @@ OptStr readStringRef(DataInput* input, SkeletonData* skeletonData) {
     else return skeletonData->strings[index - 1]; 
 }
 
-OptSequence readSequence(DataInput* input) {
-    if (!readBoolean(input)) return std::nullopt;
-    Sequence sequence; 
-    sequence.count = readVarint(input, true);
-    sequence.start = readVarint(input, true);
-    sequence.digits = readVarint(input, true);
-    sequence.setupIndex = readVarint(input, true);
-    return sequence;
-}
-
 void readFloatArray(DataInput* input, int n, std::vector<float>& array) {
     array.resize(n, 0);
     for (int i = 0; i < n; i++)
@@ -213,7 +203,6 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                     region.height = readFloat(input);
                     Color color = readColor(input);
                     if (color != Color{0xff, 0xff, 0xff, 0xff}) region.color = color;
-                    region.sequence = readSequence(input);
                     attachment.data = region;
                     break; 
                 }
@@ -240,7 +229,6 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                     readShortArray(input, mesh.triangles);
                     readVertices(input, mesh.vertices, vertexCount);
                     mesh.hullLength = readVarint(input, true);
-                    mesh.sequence = readSequence(input);
                     if (skeletonData->nonessential) {
                         readShortArray(input, mesh.edges);
                         mesh.width = readFloat(input);
@@ -258,7 +246,6 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                     linkedMesh.skin = readStringRef(input, skeletonData).value();
                     linkedMesh.parentMesh = readStringRef(input, skeletonData).value();
                     linkedMesh.timelines = readBoolean(input) ? 1 : 0;
-                    linkedMesh.sequence = readSequence(input);
                     if (skeletonData->nonessential) {
                         linkedMesh.width = readFloat(input);
                         linkedMesh.height = readFloat(input);
@@ -668,56 +655,38 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
             std::string slotName = skeletonData->slots[readVarint(input, true)].name.value();
             for (int iii = 0, nnn = readVarint(input, true); iii < nnn; iii++) {
                 std::string attachmentName = readStringRef(input, skeletonData).value();
-                MultiTimeline attachmentTimeline;
-                AttachmentTimelineType timelineType = static_cast<AttachmentTimelineType>(readByte(input));
+                Timeline attachmentTimeline;
                 int frameCount = readVarint(input, true);
-                switch (timelineType) {
-                    case ATTACHMENT_DEFORM: {
-                        int bezierCount = readVarint(input, true);
-                        float time = readFloat(input);
-                        for (int frameIndex = 0; ; frameIndex++) {
-                            TimelineFrame frame; 
-                            frame.time = time; 
-                            size_t end = (size_t) readVarint(input, true);
-                            if (end != 0) {
-                                size_t start = (size_t) readVarint(input, true);
-                                frame.int1 = start;
-                                end += start;
-                                for (size_t v = start; v < end; v++)
-                                    frame.vertices.push_back(readFloat(input));
-                            }
-                            if (frameIndex == frameCount - 1) {
-                                attachmentTimeline["deform"].push_back(frame);
-                                break; 
-                            }
-                            time = readFloat(input);
-                            switch (readSByte(input)) {
-                                case CURVE_STEPPED: {
-                                    frame.curveType = CurveType::CURVE_STEPPED;
-                                    break; 
-                                }
-                                case CURVE_BEZIER: {
-                                    frame.curveType = CurveType::CURVE_BEZIER;
-                                    readCurve(input, frame, 1);
-                                    break;
-                                }
-                            }
-                            attachmentTimeline["deform"].push_back(frame);
-                        }
+                int bezierCount = readVarint(input, true);
+                float time = readFloat(input);
+                for (int frameIndex = 0; ; frameIndex++) {
+                    TimelineFrame frame; 
+                    frame.time = time; 
+                    size_t end = (size_t) readVarint(input, true);
+                    if (end != 0) {
+                        size_t start = (size_t) readVarint(input, true);
+                        frame.int1 = start;
+                        end += start;
+                        for (size_t v = start; v < end; v++)
+                            frame.vertices.push_back(readFloat(input));
+                    }
+                    if (frameIndex == frameCount - 1) {
+                        attachmentTimeline.push_back(frame);
                         break; 
                     }
-                    case ATTACHMENT_SEQUENCE: {
-                        for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
-                            TimelineFrame frame; 
-                            frame.time = readFloat(input);
-                            int modeAndIndex = readInt(input);
-                            frame.sequenceMode = (SequenceMode) (modeAndIndex & 0xf);
-                            frame.int1 = modeAndIndex >> 4; 
-                            frame.value1 = readFloat(input);
-                            attachmentTimeline["sequence"].push_back(frame);
+                    time = readFloat(input);
+                    switch (readSByte(input)) {
+                        case CURVE_STEPPED: {
+                            frame.curveType = CurveType::CURVE_STEPPED;
+                            break; 
                         }
-                        break; 
+                        case CURVE_BEZIER: {
+                            frame.curveType = CurveType::CURVE_BEZIER;
+                            readCurve(input, frame, 1);
+                            break;
+                        }
                     }
+                    attachmentTimeline.push_back(frame);
                 }
                 animation.attachments[skinName][slotName][attachmentName] = attachmentTimeline;
             }

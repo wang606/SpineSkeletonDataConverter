@@ -107,18 +107,6 @@ void writeStringRef(Binary& binary, const OptStr& string, const SkeletonData& sk
     writeVarint(binary, index, true);
 }
 
-void writeSequence(Binary& binary, const OptSequence& sequence) {
-    if (!sequence) {
-        writeBoolean(binary, false);
-        return; 
-    }
-    writeBoolean(binary, true);
-    writeVarint(binary, sequence->count, true);
-    writeVarint(binary, sequence->start, true);
-    writeVarint(binary, sequence->digits, true);
-    writeVarint(binary, sequence->setupIndex, true);
-}
-
 void writeFloatArray(Binary& binary, const std::vector<float>& array) {
     for (float value : array) {
         writeFloat(binary, value);
@@ -257,7 +245,6 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     writeFloat(binary, region.height);
                     if (region.color) writeColor(binary, region.color.value());
                     else writeColor(binary, Color{0xff, 0xff, 0xff, 0xff});
-                    writeSequence(binary, region.sequence);
                     break; 
                 }
                 case AttachmentType_Boundingbox: {
@@ -282,7 +269,6 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     writeShortArray(binary, mesh.triangles);
                     writeVertices(binary, mesh.vertices, mesh.vertices.size() > vertexCount * 2);
                     writeVarint(binary, mesh.hullLength, true);
-                    writeSequence(binary, mesh.sequence);
                     if (skeletonData.nonessential) {
                         writeShortArray(binary, mesh.edges);
                         writeFloat(binary, mesh.width);
@@ -299,7 +285,6 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     writeStringRef(binary, linkedMesh.skin, skeletonData);
                     writeStringRef(binary, linkedMesh.parentMesh, skeletonData);
                     writeBoolean(binary, linkedMesh.timelines > 0); 
-                    writeSequence(binary, linkedMesh.sequence);
                     if (skeletonData.nonessential) {
                         writeFloat(binary, linkedMesh.width);
                         writeFloat(binary, linkedMesh.height);
@@ -613,42 +598,25 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
             }
             writeVarint(binary, slotIndex, true);
             writeVarint(binary, slotMap.size(), true);
-            for (const auto& [attachmentName, multiTimeline] : slotMap) {
+            for (const auto& [attachmentName, timeline] : slotMap) {
                 writeStringRef(binary, attachmentName, skeletonData); 
-                assert(multiTimeline.size() == 1); 
-                AttachmentTimelineType timelineType = attachmentTimelineTypeMap.at(multiTimeline.begin()->first); 
-                writeByte(binary, (unsigned char)timelineType);
-                const auto& timeline = multiTimeline.begin()->second;
                 writeVarint(binary, timeline.size(), true);
-                switch (timelineType) {
-                    case ATTACHMENT_DEFORM: {
-                        writeVarint(binary, timeline.size(), true);
-                        writeFloat(binary, timeline[0].time);
-                        for (int frameIndex = 0; ; frameIndex++) {
-                            writeVarint(binary, timeline[frameIndex].vertices.size(), true); 
-                            if (timeline[frameIndex].vertices.size() > 0) {
-                                writeVarint(binary, timeline[frameIndex].int1, true); 
-                                for (float v : timeline[frameIndex].vertices) {
-                                    writeFloat(binary, v);
-                                }
-                            }
-                            if (frameIndex == timeline.size() - 1) break;
-                            writeFloat(binary, timeline[frameIndex + 1].time);
-                            CurveType curveType = timeline[frameIndex].curveType;
-                            writeSByte(binary, (signed char)curveType);
-                            if (curveType == CurveType::CURVE_BEZIER) {
-                                writeCurve(binary, timeline[frameIndex]);
-                            }
+                writeVarint(binary, timeline.size(), true);
+                writeFloat(binary, timeline[0].time);
+                for (int frameIndex = 0; ; frameIndex++) {
+                    writeVarint(binary, timeline[frameIndex].vertices.size(), true); 
+                    if (timeline[frameIndex].vertices.size() > 0) {
+                        writeVarint(binary, timeline[frameIndex].int1, true); 
+                        for (float v : timeline[frameIndex].vertices) {
+                            writeFloat(binary, v);
                         }
-                        break; 
                     }
-                    case ATTACHMENT_SEQUENCE: {
-                        for (const auto& frame : timeline) {
-                            writeFloat(binary, frame.time);
-                            writeInt(binary, (frame.int1 << 4) | (frame.sequenceMode & 0xf));
-                            writeFloat(binary, frame.value1);
-                        }
-                        break;
+                    if (frameIndex == timeline.size() - 1) break;
+                    writeFloat(binary, timeline[frameIndex + 1].time);
+                    CurveType curveType = timeline[frameIndex].curveType;
+                    writeSByte(binary, (signed char)curveType);
+                    if (curveType == CurveType::CURVE_BEZIER) {
+                        writeCurve(binary, timeline[frameIndex]);
                     }
                 }
             }

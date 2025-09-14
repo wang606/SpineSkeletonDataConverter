@@ -46,16 +46,6 @@ static const std::map<std::string, AttachmentType> attachmentTypeMap = {
     {"clipping", AttachmentType_Clipping}
 };
 
-static const std::map<std::string, SequenceMode> sequenceModeMap = {
-    {"hold", SequenceMode::hold},
-    {"once", SequenceMode::once},
-    {"loop", SequenceMode::loop},
-    {"pingpong", SequenceMode::pingpong},
-    {"onceReverse", SequenceMode::onceReverse},
-    {"loopReverse", SequenceMode::loopReverse},
-    {"pingpongReverse", SequenceMode::pingpongReverse}
-};
-
 Color stringToColor(const std::string& str, bool hasAlpha) {
     Color color;
     const char* value = str.c_str();
@@ -69,15 +59,6 @@ Color stringToColor(const std::string& str, bool hasAlpha) {
     color.b = parseHex(value, 2);
     color.a = hasAlpha ? parseHex(value, 3) : 255;
     return color;
-}
-
-Sequence readSequence(const Json& j) {
-    Sequence sequence;
-    sequence.count = j.value("count", 0);
-    sequence.start = j.value("start", 1);
-    sequence.digits = j.value("digits", 0);
-    sequence.setupIndex = j.value("setupIndex", 0);
-    return sequence;
 }
 
 void readCurve(const Json& j, TimelineFrame& frame) {
@@ -248,7 +229,6 @@ SkeletonData readJsonData(const Json& j) {
                                 region.width = attachmentJson.value("width", 32.0f);
                                 region.height = attachmentJson.value("height", 32.0f);
                                 if (attachmentJson.contains("color")) region.color = stringToColor(attachmentJson["color"], true);
-                                if (attachmentJson.contains("sequence")) region.sequence = readSequence(attachmentJson["sequence"]);
                                 attachment.data = region;
                                 break; 
                             }
@@ -257,7 +237,6 @@ SkeletonData readJsonData(const Json& j) {
                                 mesh.width = attachmentJson.value("width", 32.0f);
                                 mesh.height = attachmentJson.value("height", 32.0f);
                                 if (attachmentJson.contains("color")) mesh.color = stringToColor(attachmentJson["color"], true);
-                                if (attachmentJson.contains("sequence")) mesh.sequence = readSequence(attachmentJson["sequence"]);
                                 mesh.hullLength = attachmentJson.value("hull", 0);
                                 mesh.triangles = attachmentJson.value("triangles", std::vector<unsigned short>{});
                                 mesh.edges = attachmentJson.value("edges", std::vector<unsigned short>{});
@@ -271,9 +250,8 @@ SkeletonData readJsonData(const Json& j) {
                                 linkedMesh.width = attachmentJson.value("width", 32.0f);
                                 linkedMesh.height = attachmentJson.value("height", 32.0f);
                                 if (attachmentJson.contains("color")) linkedMesh.color = stringToColor(attachmentJson["color"], true);
-                                if (attachmentJson.contains("sequence")) linkedMesh.sequence = readSequence(attachmentJson["sequence"]);
                                 linkedMesh.parentMesh = attachmentJson["parent"];
-                                linkedMesh.timelines = attachmentJson.value("timelines", 1);
+                                linkedMesh.timelines = attachmentJson.value("deform", 1);
                                 if (attachmentJson.contains("skin")) linkedMesh.skin = attachmentJson["skin"];
                                 attachment.data = linkedMesh;
                                 break; 
@@ -353,7 +331,7 @@ SkeletonData readJsonData(const Json& j) {
                         for (const auto& frameJson : slotJson["attachment"]) {
                             TimelineFrame frame;
                             frame.time = frameJson.value("time", 0.0f);
-                            if (frameJson.contains("name")) frame.str1 = frameJson["name"];
+                            if (frameJson.contains("name") && !frameJson["name"].is_null()) frame.str1 = frameJson["name"];
                             slotTimeline["attachment"].push_back(frame);
                         }
                     }
@@ -434,14 +412,6 @@ SkeletonData readJsonData(const Json& j) {
                     if (boneJson.contains("sheary")) {
                         readTimeline(boneJson["sheary"], boneTimeline["sheary"], 1, "value", "", 0.0f);
                     }
-                    if (boneJson.contains("inherit")) {
-                        for (const auto& frameJson : boneJson["inherit"]) {
-                            TimelineFrame frame;
-                            frame.time = frameJson.value("time", 0.0f);
-                            frame.inherit = inheritMap.at(frameJson.value("inherit", "normal"));
-                            boneTimeline["inherit"].push_back(frame);
-                        }
-                    }
                     animationData.bones[boneName] = boneTimeline;
                 }
             }
@@ -503,34 +473,20 @@ SkeletonData readJsonData(const Json& j) {
                     animationData.path[pathName] = pathTimeline;
                 }
             }
-            if (animationJson.contains("attachments")) {
-                for (const auto& [skinName, skinJson] : animationJson["attachments"].items()) {
+            if (animationJson.contains("deform")) {
+                for (const auto& [skinName, skinJson] : animationJson["deform"].items()) {
                     for (const auto& [slotName, slotJson] : skinJson.items()) {
                         for (const auto& [attachmentName, attachmentJson] : slotJson.items()) {
-                            MultiTimeline attachmentTimeline;
-                            if (attachmentJson.contains("deform")) {
-                                for (const auto& frameJson : attachmentJson["deform"]) {
-                                    TimelineFrame frame;
-                                    frame.time = frameJson.value("time", 0.0f);
-                                    if (frameJson.contains("vertices")) {
-                                        frame.int1 = frameJson.value("offset", 0);
-                                        frame.vertices = frameJson["vertices"].get<std::vector<float>>();
-                                    }
-                                    readCurve(frameJson, frame);
-                                    attachmentTimeline["deform"].push_back(frame);
+                            Timeline attachmentTimeline;
+                            for (const auto& frameJson : attachmentJson) {
+                                TimelineFrame frame;
+                                frame.time = frameJson.value("time", 0.0f);
+                                if (frameJson.contains("vertices")) {
+                                    frame.int1 = frameJson.value("offset", 0);
+                                    frame.vertices = frameJson["vertices"].get<std::vector<float>>();
                                 }
-                            }
-                            if (attachmentJson.contains("sequence")) {
-                                float lastDelay = 0.0f; 
-                                for (const auto& frameJson : attachmentJson["sequence"]) {
-                                    TimelineFrame frame;
-                                    frame.time = frameJson.value("time", 0.0f);
-                                    frame.value1 = frameJson.value("delay", lastDelay);
-                                    lastDelay = frame.value1;
-                                    frame.int1 = frameJson.value("index", 0);
-                                    frame.sequenceMode = sequenceModeMap.at(frameJson.value("mode", "hold"));
-                                    attachmentTimeline["sequence"].push_back(frame);
-                                }
+                                readCurve(frameJson, frame);
+                                attachmentTimeline.push_back(frame);
                             }
                             animationData.attachments[skinName][slotName][attachmentName] = attachmentTimeline;
                         }

@@ -434,14 +434,6 @@ SkeletonData readJsonData(const Json& j) {
                     if (boneJson.contains("sheary")) {
                         readTimeline(boneJson["sheary"], boneTimeline["sheary"], 1, "value", "", 0.0f);
                     }
-                    if (boneJson.contains("inherit")) {
-                        for (const auto& frameJson : boneJson["inherit"]) {
-                            TimelineFrame frame;
-                            frame.time = frameJson.value("time", 0.0f);
-                            frame.inherit = inheritMap.at(frameJson.value("inherit", "normal"));
-                            boneTimeline["inherit"].push_back(frame);
-                        }
-                    }
                     animationData.bones[boneName] = boneTimeline;
                 }
             }
