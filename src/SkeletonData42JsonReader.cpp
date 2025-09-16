@@ -1,5 +1,4 @@
-#include "SkeletonData42.h"
-using namespace spine42;
+#include "SkeletonData.h"
 
 namespace spine42 {
 
@@ -145,8 +144,8 @@ SkeletonData readJsonData(const Json& j) {
     if (j.contains("slots")) {
         for (const auto& slotJson : j["slots"]) {
             SlotData slotData;
-            slotData.name = slotJson.contains("name") ? std::optional<std::string>(slotJson["name"]) : std::nullopt;
-            slotData.bone = slotJson.contains("bone") ? std::optional<std::string>(slotJson["bone"]) : std::nullopt;
+            if (slotJson.contains("name")) slotData.name = slotJson["name"];
+            if (slotJson.contains("bone")) slotData.bone = slotJson["bone"];
             if (slotJson.contains("color")) slotData.color = stringToColor(slotJson["color"], true);
             if (slotJson.contains("dark")) slotData.darkColor = stringToColor(slotJson["dark"], false);
             if (slotJson.contains("attachment")) slotData.attachmentName = slotJson["attachment"];

@@ -1,5 +1,4 @@
-#include "SkeletonData41.h"
-using namespace spine41;
+#include "SkeletonData.h"
 #include <set>
 
 namespace spine41 {
@@ -23,7 +22,8 @@ static const std::map<std::string, BoneTimelineType> boneTimelineTypeMap = {
     {"scaley", BONE_SCALEY}, 
     {"shear", BONE_SHEAR}, 
     {"shearx", BONE_SHEARX}, 
-    {"sheary", BONE_SHEARY}
+    {"sheary", BONE_SHEARY}, 
+    {"inherit", BONE_INHERIT}
 };
 
 static const std::map<std::string, PathTimelineType> pathTimelineTypeMap = {
@@ -474,6 +474,7 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         writeVarint(binary, multiTimeline.size(), true);
         for (const auto& [timelineName, timeline] : multiTimeline) {
             BoneTimelineType timelineType = boneTimelineTypeMap.at(timelineName);
+            if (timelineType == BONE_INHERIT) continue;
             writeByte(binary, (unsigned char)timelineType);
             writeVarint(binary, timeline.size(), true);
             switch (timelineType) {
@@ -682,7 +683,7 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         }
         const EventData& eventData = skeletonData.events[eventIndex];
         writeVarint(binary, eventIndex, true);
-        writeVarint(binary, frame.int1, true);
+        writeVarint(binary, frame.int1, false);
         writeFloat(binary, frame.value1);
         if (frame.str2 != eventData.stringValue) {
             writeBoolean(binary, true);

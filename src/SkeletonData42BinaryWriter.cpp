@@ -1,5 +1,4 @@
-#include "SkeletonData42.h"
-using namespace spine42;
+#include "SkeletonData.h"
 #include <set>
 
 namespace spine42 {
@@ -789,7 +788,7 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         }
         const EventData& eventData = skeletonData.events[eventIndex];
         writeVarint(binary, eventIndex, true);
-        writeVarint(binary, frame.int1, true);
+        writeVarint(binary, frame.int1, false);
         writeFloat(binary, frame.value1);
         if (frame.str2 != eventData.stringValue) {
             writeString(binary, frame.str2);

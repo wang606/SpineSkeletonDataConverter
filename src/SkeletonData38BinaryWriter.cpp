@@ -1,5 +1,4 @@
-#include "SkeletonData38.h"
-using namespace spine38;
+#include "SkeletonData.h"
 #include <set>
 
 namespace spine38 {
@@ -23,7 +22,8 @@ static const std::map<std::string, BoneTimelineType> boneTimelineTypeMap = {
     {"scaley", BONE_SCALEY}, 
     {"shear", BONE_SHEAR}, 
     {"shearx", BONE_SHEARX}, 
-    {"sheary", BONE_SHEARY}
+    {"sheary", BONE_SHEARY}, 
+    {"inherit", BONE_INHERIT}
 };
 
 static const std::map<std::string, PathTimelineType> pathTimelineTypeMap = {
@@ -142,26 +142,21 @@ void writeVertices(Binary& binary, const std::vector<float>& vertices, bool weig
 }
 
 void writeCurve(Binary& binary, const TimelineFrame& frame) {
-    for (int i = 0; i < frame.curve.size(); i++) {
-        writeFloat(binary, frame.curve[i]);
+    writeByte(binary, (unsigned char)frame.curveType);
+    if (frame.curveType == CurveType::CURVE_BEZIER) {
+        writeFloat(binary, frame.curve[0]);
+        writeFloat(binary, frame.curve[1]);
+        writeFloat(binary, frame.curve[2]);
+        writeFloat(binary, frame.curve[3]);
     }
 }
 
 void writeTimeline(Binary& binary, const Timeline& timeline, int valueNum) {
-    writeFloat(binary, timeline[0].time); 
-    writeFloat(binary, timeline[0].value1);
-    if (valueNum > 1) writeFloat(binary, timeline[0].value2);
-    if (valueNum > 2) writeFloat(binary, timeline[0].value3);
-    for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
+    for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
         writeFloat(binary, timeline[frameIndex].time); 
         writeFloat(binary, timeline[frameIndex].value1);
         if (valueNum > 1) writeFloat(binary, timeline[frameIndex].value2);
-        if (valueNum > 2) writeFloat(binary, timeline[frameIndex].value3);
-        CurveType curveType = timeline[frameIndex - 1].curveType;
-        writeSByte(binary, (signed char)curveType);
-        if (curveType == CurveType::CURVE_BEZIER) {
-            writeCurve(binary, timeline[frameIndex - 1]);
-        }
+        if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
     }
 }
 
@@ -340,7 +335,6 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
 
 void writeAnimation(Binary& binary, const Animation& animation, const SkeletonData& skeletonData) {
     writeString(binary, animation.name); 
-    writeVarint(binary, 0, true); // numTimelines is no use.
     writeVarint(binary, animation.slots.size(), true);
     for (const auto& [slotName, multiTimeline] : animation.slots) {
         int slotIndex = 0; 
@@ -354,7 +348,20 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         writeVarint(binary, multiTimeline.size(), true);
         for (const auto& [timelineName, timeline] : multiTimeline) {
             SlotTimelineType timelineType = slotTimelineTypeMap.at(timelineName);
-            writeByte(binary, (unsigned char)timelineType);
+            if (timelineType == SlotTimelineType::SLOT_ALPHA) continue;
+            switch (timelineType) {
+                case SlotTimelineType::SLOT_ATTACHMENT:
+                    writeByte(binary, 0);  // SLOT_ATTACHMENT
+                    break;
+                case SlotTimelineType::SLOT_RGBA:
+                case SlotTimelineType::SLOT_RGB:
+                    writeByte(binary, 1);  // SLOT_COLOR
+                    break;
+                case SlotTimelineType::SLOT_RGBA2:
+                case SlotTimelineType::SLOT_RGB2:
+                    writeByte(binary, 2);  // SLOT_TWO_COLOR
+                    break;
+            }
             writeVarint(binary, timeline.size(), true);
             switch (timelineType) {
                 case SlotTimelineType::SLOT_ATTACHMENT: {
@@ -364,82 +371,25 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
                     }
                     break;
                 }
-                case SlotTimelineType::SLOT_RGBA: {
-                    writeVarint(binary, timeline.size() * 4, true); 
-                    writeFloat(binary, timeline[0].time);
-                    writeColor(binary, timeline[0].color1.value()); 
-                    for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
-                        writeFloat(binary, timeline[frameIndex].time); 
-                        writeColor(binary, timeline[frameIndex].color1.value()); 
-                        CurveType curveType = timeline[frameIndex - 1].curveType;
-                        writeSByte(binary, (signed char)curveType);
-                        if (curveType == CurveType::CURVE_BEZIER) {
-                            writeCurve(binary, timeline[frameIndex - 1]);
-                        }
-                    }
-                    break;
-                }
+                case SlotTimelineType::SLOT_RGBA:
                 case SlotTimelineType::SLOT_RGB: {
-                    writeVarint(binary, timeline.size() * 3, true); 
-                    writeFloat(binary, timeline[0].time);
-                    writeColor(binary, timeline[0].color1.value(), false); 
-                    for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
-                        writeFloat(binary, timeline[frameIndex].time); 
-                        writeColor(binary, timeline[frameIndex].color1.value(), false); 
-                        CurveType curveType = timeline[frameIndex - 1].curveType;
-                        writeSByte(binary, (signed char)curveType);
-                        if (curveType == CurveType::CURVE_BEZIER) {
-                            writeCurve(binary, timeline[frameIndex - 1]);
-                        }
-                    }
-                    break;
-                }
-                case SlotTimelineType::SLOT_RGBA2: {
-                    writeVarint(binary, timeline.size() * 7, true); 
-                    writeFloat(binary, timeline[0].time);
-                    writeColor(binary, timeline[0].color1.value()); 
-                    writeColor(binary, timeline[0].color2.value(), false); 
-                    for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
+                    for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
                         writeFloat(binary, timeline[frameIndex].time); 
                         writeColor(binary, timeline[frameIndex].color1.value()); 
-                        writeColor(binary, timeline[frameIndex].color2.value(), false); 
-                        CurveType curveType = timeline[frameIndex - 1].curveType;
-                        writeSByte(binary, (signed char)curveType);
-                        if (curveType == CurveType::CURVE_BEZIER) {
-                            writeCurve(binary, timeline[frameIndex - 1]);
-                        }
+                        if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
                     }
                     break;
                 }
+                case SlotTimelineType::SLOT_RGBA2:
                 case SlotTimelineType::SLOT_RGB2: {
-                    writeVarint(binary, timeline.size() * 6, true); 
-                    writeFloat(binary, timeline[0].time);
-                    writeColor(binary, timeline[0].color1.value(), false); 
-                    writeColor(binary, timeline[0].color2.value(), false); 
-                    for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
+                    for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
                         writeFloat(binary, timeline[frameIndex].time); 
-                        writeColor(binary, timeline[frameIndex].color1.value(), false); 
-                        writeColor(binary, timeline[frameIndex].color2.value(), false); 
-                        CurveType curveType = timeline[frameIndex - 1].curveType;
-                        writeSByte(binary, (signed char)curveType);
-                        if (curveType == CurveType::CURVE_BEZIER) {
-                            writeCurve(binary, timeline[frameIndex - 1]);
-                        }
-                    }
-                    break;
-                }
-                case SlotTimelineType::SLOT_ALPHA: {
-                    writeVarint(binary, timeline.size(), true);
-                    writeFloat(binary, timeline[0].time);
-                    writeByte(binary, (int)(timeline[0].value1 * 255.0f));
-                    for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
-                        writeFloat(binary, timeline[frameIndex].time); 
-                        writeByte(binary, (int)(timeline[frameIndex].value1 * 255.0f));
-                        CurveType curveType = timeline[frameIndex - 1].curveType;
-                        writeSByte(binary, (signed char)curveType);
-                        if (curveType == CurveType::CURVE_BEZIER) {
-                            writeCurve(binary, timeline[frameIndex - 1]);
-                        }
+                        writeColor(binary, timeline[frameIndex].color1.value()); 
+                        writeByte(binary, timeline[frameIndex].color2->a); 
+                        writeByte(binary, timeline[frameIndex].color2->r); 
+                        writeByte(binary, timeline[frameIndex].color2->g); 
+                        writeByte(binary, timeline[frameIndex].color2->b); 
+                        if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
                     }
                     break;
                 }
@@ -459,24 +409,58 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         writeVarint(binary, multiTimeline.size(), true);
         for (const auto& [timelineName, timeline] : multiTimeline) {
             BoneTimelineType timelineType = boneTimelineTypeMap.at(timelineName);
-            writeByte(binary, (unsigned char)timelineType);
-            writeVarint(binary, timeline.size(), true);
+            if (timelineType == BONE_INHERIT) continue;
             switch (timelineType) {
                 case BONE_ROTATE:
+                    writeByte(binary, 0);  // BONE_ROTATE
+                    break;
+                case BONE_TRANSLATE:
                 case BONE_TRANSLATEX:
                 case BONE_TRANSLATEY:
+                    writeByte(binary, 1);  // BONE_TRANSLATE
+                    break;
+                case BONE_SCALE:
                 case BONE_SCALEX:
                 case BONE_SCALEY:
+                    writeByte(binary, 2);  // BONE_SCALE
+                    break;
+                case BONE_SHEAR:
                 case BONE_SHEARX:
-                case BONE_SHEARY: {
-                    writeVarint(binary, timeline.size(), true); 
+                case BONE_SHEARY:
+                    writeByte(binary, 3);  // BONE_SHEAR
+                    break;
+            }
+            writeVarint(binary, timeline.size(), true);
+            switch (timelineType) {
+                case BONE_ROTATE: {
                     writeTimeline(binary, timeline, 1);
+                    break;
+                }
+                case BONE_TRANSLATEX:
+                case BONE_SCALEX:
+                case BONE_SHEARX: {
+                    for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
+                        writeFloat(binary, timeline[frameIndex].time); 
+                        writeFloat(binary, timeline[frameIndex].value1); 
+                        writeFloat(binary, 0.0f); 
+                        if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
+                    }
+                    break;
+                }
+                case BONE_TRANSLATEY:
+                case BONE_SCALEY:
+                case BONE_SHEARY: {
+                    for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
+                        writeFloat(binary, timeline[frameIndex].time); 
+                        writeFloat(binary, 0.0f); 
+                        writeFloat(binary, timeline[frameIndex].value1); 
+                        if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
+                    }
                     break;
                 }
                 case BONE_TRANSLATE:
                 case BONE_SCALE:
                 case BONE_SHEAR: {
-                    writeVarint(binary, timeline.size() * 2, true); 
                     writeTimeline(binary, timeline, 2);
                     break;
                 }
@@ -494,23 +478,14 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         }
         writeVarint(binary, ikIndex, true);
         writeVarint(binary, timeline.size(), true);
-        writeVarint(binary, timeline.size() * 2, true);
-        writeFloat(binary, timeline[0].time);
-        writeFloat(binary, timeline[0].value1);
-        writeFloat(binary, timeline[0].value2);
-        for (int frameIndex = 0; ; frameIndex++) {
+        for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
+            writeFloat(binary, timeline[frameIndex].time);
+            writeFloat(binary, timeline[frameIndex].value1);
+            writeFloat(binary, timeline[frameIndex].value2);
             writeSByte(binary, timeline[frameIndex].bendPositive ? 1 : -1); 
             writeBoolean(binary, timeline[frameIndex].compress);
             writeBoolean(binary, timeline[frameIndex].stretch);
-            if (frameIndex == timeline.size() - 1) break;
-            writeFloat(binary, timeline[frameIndex + 1].time);
-            writeFloat(binary, timeline[frameIndex + 1].value1);
-            writeFloat(binary, timeline[frameIndex + 1].value2);
-            CurveType curveType = timeline[frameIndex].curveType;
-            writeSByte(binary, (signed char)curveType);
-            if (curveType == CurveType::CURVE_BEZIER) {
-                writeCurve(binary, timeline[frameIndex]);
-            }
+            if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
         }
     }
     writeVarint(binary, animation.transform.size(), true); 
@@ -524,27 +499,13 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         }
         writeVarint(binary, transformIndex, true);
         writeVarint(binary, timeline.size(), true);
-        writeVarint(binary, timeline.size() * 6, true);
-        writeFloat(binary, timeline[0].time);
-        writeFloat(binary, timeline[0].value1);
-        writeFloat(binary, timeline[0].value2);
-        writeFloat(binary, timeline[0].value3);
-        writeFloat(binary, timeline[0].value4);
-        writeFloat(binary, timeline[0].value5);
-        writeFloat(binary, timeline[0].value6);
-        for (int frameIndex = 1; frameIndex < timeline.size(); frameIndex++) {
+        for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
             writeFloat(binary, timeline[frameIndex].time);
             writeFloat(binary, timeline[frameIndex].value1);
             writeFloat(binary, timeline[frameIndex].value2);
-            writeFloat(binary, timeline[frameIndex].value3);
             writeFloat(binary, timeline[frameIndex].value4);
-            writeFloat(binary, timeline[frameIndex].value5);
             writeFloat(binary, timeline[frameIndex].value6);
-            CurveType curveType = timeline[frameIndex - 1].curveType;
-            writeSByte(binary, (signed char)curveType);
-            if (curveType == CurveType::CURVE_BEZIER) {
-                writeCurve(binary, timeline[frameIndex - 1]);
-            }
+            if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
         }
     }
     writeVarint(binary, animation.path.size(), true); 
@@ -560,18 +521,16 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         writeVarint(binary, multiTimeline.size(), true);
         for (const auto& [timelineName, timeline] : multiTimeline) {
             PathTimelineType timelineType = pathTimelineTypeMap.at(timelineName);
-            writeByte(binary, (unsigned char)timelineType);
+            writeSByte(binary, (signed char)timelineType);
             writeVarint(binary, timeline.size(), true);
             switch (timelineType) {
                 case PATH_POSITION:
                 case PATH_SPACING: {
-                    writeVarint(binary, timeline.size(), true); 
                     writeTimeline(binary, timeline, 1);
                     break;
                 }
                 case PATH_MIX: {
-                    writeVarint(binary, timeline.size() * 3, true); 
-                    writeTimeline(binary, timeline, 3);
+                    writeTimeline(binary, timeline, 2);
                     break;
                 }
             }
@@ -598,12 +557,13 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
             }
             writeVarint(binary, slotIndex, true);
             writeVarint(binary, slotMap.size(), true);
-            for (const auto& [attachmentName, timeline] : slotMap) {
+            for (const auto& [attachmentName, multiTimeline] : slotMap) {
+                if (!multiTimeline.contains("deform")) continue;
+                const auto& timeline = multiTimeline.at("deform");
                 writeStringRef(binary, attachmentName, skeletonData); 
                 writeVarint(binary, timeline.size(), true);
-                writeVarint(binary, timeline.size(), true);
-                writeFloat(binary, timeline[0].time);
-                for (int frameIndex = 0; ; frameIndex++) {
+                for (int frameIndex = 0; frameIndex < timeline.size(); frameIndex++) {
+                    writeFloat(binary, timeline[frameIndex].time);
                     writeVarint(binary, timeline[frameIndex].vertices.size(), true); 
                     if (timeline[frameIndex].vertices.size() > 0) {
                         writeVarint(binary, timeline[frameIndex].int1, true); 
@@ -611,13 +571,7 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
                             writeFloat(binary, v);
                         }
                     }
-                    if (frameIndex == timeline.size() - 1) break;
-                    writeFloat(binary, timeline[frameIndex + 1].time);
-                    CurveType curveType = timeline[frameIndex].curveType;
-                    writeSByte(binary, (signed char)curveType);
-                    if (curveType == CurveType::CURVE_BEZIER) {
-                        writeCurve(binary, timeline[frameIndex]);
-                    }
+                    if (frameIndex < timeline.size() - 1) writeCurve(binary, timeline[frameIndex]);
                 }
             }
         }
@@ -650,7 +604,7 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
         }
         const EventData& eventData = skeletonData.events[eventIndex];
         writeVarint(binary, eventIndex, true);
-        writeVarint(binary, frame.int1, true);
+        writeVarint(binary, frame.int1, false);
         writeFloat(binary, frame.value1);
         if (frame.str2 != eventData.stringValue) {
             writeBoolean(binary, true);
@@ -668,8 +622,11 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
 Binary writeBinaryData(SkeletonData& skeletonData) {
     Binary binary;
     
-    writeInt(binary, skeletonData.hash & 0xffffffff); 
-    writeInt(binary, (skeletonData.hash >> 32) & 0xffffffff);
+    if (skeletonData.hashString) {
+        writeString(binary, skeletonData.hashString);
+    } else {
+        writeString(binary, uint64ToBase64(skeletonData.hash));
+    }
     writeString(binary, skeletonData.version);
     writeFloat(binary, skeletonData.x); 
     writeFloat(binary, skeletonData.y);
@@ -750,10 +707,10 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
         if (slot.color) writeColor(binary, slot.color.value());
         else writeColor(binary, Color{0xff, 0xff, 0xff, 0xff});
         if (slot.darkColor) {
-            writeByte(binary, slot.darkColor.value().a); 
             writeByte(binary, slot.darkColor.value().r);
             writeByte(binary, slot.darkColor.value().g);
             writeByte(binary, slot.darkColor.value().b);
+            writeByte(binary, slot.darkColor.value().a); 
         } else writeColor(binary, Color{0xff, 0xff, 0xff, 0xff});
         writeStringRef(binary, slot.attachmentName, skeletonData);
         writeVarint(binary, slot.blendMode, true); 
@@ -827,9 +784,9 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
         writeFloat(binary, transform.offsetShearY);
         writeFloat(binary, transform.mixRotate);
         writeFloat(binary, transform.mixX);
-        writeFloat(binary, transform.mixY);
+        // writeFloat(binary, transform.mixY);
         writeFloat(binary, transform.mixScaleX);
-        writeFloat(binary, transform.mixScaleY);
+        // writeFloat(binary, transform.mixScaleY);
         writeFloat(binary, transform.mixShearY);
     }
 
@@ -866,7 +823,7 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
         writeFloat(binary, path.spacing);
         writeFloat(binary, path.mixRotate); 
         writeFloat(binary, path.mixX);
-        writeFloat(binary, path.mixY);
+        // writeFloat(binary, path.mixY);
     }
 
     /* Skins */

@@ -1,5 +1,4 @@
-#include "SkeletonData40.h"
-using namespace spine40;
+#include "SkeletonData.h"
 
 namespace spine40 {
 
@@ -488,7 +487,7 @@ SkeletonData readJsonData(const Json& j) {
                                 readCurve(frameJson, frame);
                                 attachmentTimeline.push_back(frame);
                             }
-                            animationData.attachments[skinName][slotName][attachmentName] = attachmentTimeline;
+                            animationData.attachments[skinName][slotName][attachmentName]["deform"] = attachmentTimeline;
                         }
                     }
                 }

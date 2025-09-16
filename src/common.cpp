@@ -111,7 +111,9 @@ uint64_t base64ToUint64(const std::string& str) {
     std::string padded = str;
     while (padded.size() % 4 != 0) padded.push_back('='); // 补齐长度
     std::vector<uint8_t> bytes = decodeBase64(padded);
-    if (bytes.size() > 8) throw std::runtime_error("Decoded value too large");
+    if (bytes.size() > 8) {
+        bytes = std::vector<uint8_t>(bytes.end() - 8, bytes.end()); // 取最后8个字节
+    }
     uint64_t value = 0;
     for (size_t i = 0; i < bytes.size(); i++) {
         value = (value << 8) | bytes[i];

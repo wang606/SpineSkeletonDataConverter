@@ -7,10 +7,13 @@
 #include "json.hpp"
 using Json = nlohmann::ordered_json;
 
-namespace spine38 {
-
 typedef std::optional<std::string> OptStr;
 typedef std::vector<unsigned char> Binary; 
+
+struct DataInput {
+    const unsigned char* cursor;
+    const unsigned char* end;
+};
 
 /* enum */
 
@@ -57,6 +60,16 @@ enum AttachmentType {
     AttachmentType_Clipping
 };
 
+enum SequenceMode {
+    hold = 0,
+    once = 1,
+    loop = 2,
+    pingpong = 3,
+    onceReverse = 4,
+    loopReverse = 5,
+    pingpongReverse = 6
+}; 
+
 enum BoneTimelineType {
     BONE_ROTATE = 0,
     BONE_TRANSLATE = 1,
@@ -91,6 +104,17 @@ enum PathTimelineType {
     PATH_MIX = 2
 };
 
+enum PhysicsTimelineType {
+    PHYSICS_INERTIA = 0,
+    PHYSICS_STRENGTH = 1,
+    PHYSICS_DAMPING = 2,
+    PHYSICS_MASS = 4,
+    PHYSICS_WIND = 5,
+    PHYSICS_GRAVITY = 6,
+    PHYSICS_MIX = 7,
+    PHYSICS_RESET = 8
+};
+
 enum CurveType {
     CURVE_LINEAR = 0,
     CURVE_STEPPED = 1,
@@ -109,16 +133,26 @@ struct Color {
     }
 };
 
+struct Sequence {
+    int count = 0; 
+    int start = 1; 
+    int digits = 0; 
+    int setupIndex = 0; 
+}; 
+
 typedef std::optional<Color> OptColor; 
+typedef std::optional<Sequence> OptSequence;
 
 struct RegionAttachment {
     float x = 0.0f, y = 0.0f, rotation = 0.0f, scaleX = 1.0f, scaleY = 1.0f, width = 32.0f, height = 32.0f; 
     OptColor color = std::nullopt; 
+    OptSequence sequence = std::nullopt; 
 }; 
 
 struct MeshAttachment {
     float width = 32.0f, height = 32.0f; 
     OptColor color = std::nullopt;
+    OptSequence sequence = std::nullopt; 
     int hullLength = 0; 
     std::vector<float> uvs; 
     std::vector<unsigned short> triangles; 
@@ -129,6 +163,7 @@ struct MeshAttachment {
 struct LinkedmeshAttachment {
     float width = 32.0f, height = 32.0f; 
     OptColor color = std::nullopt;
+    OptSequence sequence = std::nullopt; 
     std::string parentMesh; 
     int timelines = 1; 
     int skinIndex = -1; // temporary field used for binary format reading
@@ -187,13 +222,31 @@ struct TimelineFrame {
     std::vector<float> curve; 
 
     Inherit inherit = Inherit::Inherit_Normal;
+    SequenceMode sequenceMode = SequenceMode::hold;
     bool bendPositive = true, compress = false, stretch = false; 
     std::vector<float> vertices; 
     std::vector<std::pair<std::string, int>> offsets; 
 }; 
 
 typedef std::vector<TimelineFrame> Timeline; 
-typedef std::map<std::string, Timeline> MultiTimeline; 
+typedef std::map<std::string, Timeline> MultiTimeline;
+
+/*
+SlotTimelineTypes:
+    "attachment", "rgba", "rgb", "rgba2", "rgb2", "alpha"
+
+BoneTimelineTypes: 
+    "rotate", "translate", "translatex", "translatey", "scale", "scalex", "scaley", "shear", "shearx", "sheary", "inherit"
+
+PathTimelineTypes:
+    "position", "spacing", "mix"
+
+PhysicsTimelineTypes:
+    "inertia", "strength", "damping", "mass", "wind", "gravity", "mix", "reset"
+
+AttachmentTimelineTypes:
+    "deform", "sequence"
+*/
 
 /* data */
 
@@ -258,6 +311,16 @@ struct PathConstraintData {
     float mixRotate = 1.0f, mixX = 1.0f, mixY = 1.0f;
 };
 
+struct PhysicsConstraintData {
+    OptStr name = std::nullopt;
+    size_t order = 0;
+    bool skinRequired = false;
+    OptStr bone = std::nullopt;
+    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 0.0f, shearX = 0.0f, limit = 5000.0f;
+    float fps = 60.0f, inertia = 1.0f, strength = 100.0f, damping = 1.0f, mass = 1.0f, wind = 0.0f, gravity = 0.0f, mix = 1.0f;
+    bool inertiaGlobal = false, strengthGlobal = false, dampingGlobal = false, massGlobal = false, windGlobal = false, gravityGlobal = false, mixGlobal = false;
+};
+
 struct Skin {
     std::string name = "";
     std::map<std::string, std::map<std::string, Attachment>> attachments;
@@ -265,6 +328,7 @@ struct Skin {
     std::vector<std::string> ik;
     std::vector<std::string> transform;
     std::vector<std::string> path;
+    std::vector<std::string> physics;
     OptColor color = std::nullopt;
 }; 
 
@@ -285,15 +349,18 @@ struct Animation {
     std::map<std::string, Timeline> ik;
     std::map<std::string, Timeline> transform;
     std::map<std::string, MultiTimeline> path;
-    std::map<std::string, std::map<std::string, std::map<std::string, Timeline>>> attachments;
+    std::map<std::string, MultiTimeline> physics;
+    std::map<std::string, std::map<std::string, std::map<std::string, MultiTimeline>>> attachments;
     Timeline drawOrder;
     Timeline events;
 };
 
 struct SkeletonData {
     uint64_t hash = 0; 
+    OptStr hashString = std::nullopt;  // used for Spine 3.8 below
     OptStr version = std::nullopt; 
     float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f; 
+    float referenceScale = 100.0f; 
     bool nonessential = false;
     float fps = 30.0f; 
     OptStr imagesPath = std::nullopt; 
@@ -301,17 +368,42 @@ struct SkeletonData {
     std::vector<std::string> strings; 
     std::vector<BoneData> bones; 
     std::vector<SlotData> slots; 
-    std::vector<Skin> skins; 
-    std::vector<EventData> events; 
-    std::vector<Animation> animations; 
     std::vector<IKConstraintData> ikConstraints; 
     std::vector<TransformConstraintData> transformConstraints; 
     std::vector<PathConstraintData> pathConstraints; 
+    std::vector<PhysicsConstraintData> physicsConstraints; 
+    std::vector<Skin> skins; 
+    std::vector<EventData> events; 
+    std::vector<Animation> animations; 
 }; 
 
-SkeletonData readBinaryData(const Binary&);
-Binary writeBinaryData(SkeletonData&);
-SkeletonData readJsonData(const Json&);
-Json writeJsonData(const SkeletonData&);
-
+namespace spine37 {
+    SkeletonData readBinaryData(const Binary&);
+    Binary writeBinaryData(SkeletonData&);
+    SkeletonData readJsonData(const Json&);
+    Json writeJsonData(const SkeletonData&);
+}
+namespace spine38 {
+    SkeletonData readBinaryData(const Binary&);
+    Binary writeBinaryData(SkeletonData&);
+    SkeletonData readJsonData(const Json&);
+    Json writeJsonData(const SkeletonData&);
+}
+namespace spine40 {
+    SkeletonData readBinaryData(const Binary&);
+    Binary writeBinaryData(SkeletonData&);
+    SkeletonData readJsonData(const Json&);
+    Json writeJsonData(const SkeletonData&);
+}
+namespace spine41 {
+    SkeletonData readBinaryData(const Binary&);
+    Binary writeBinaryData(SkeletonData&);
+    SkeletonData readJsonData(const Json&);
+    Json writeJsonData(const SkeletonData&);
+}
+namespace spine42 {
+    SkeletonData readBinaryData(const Binary&);
+    Binary writeBinaryData(SkeletonData&);
+    SkeletonData readJsonData(const Json&);
+    Json writeJsonData(const SkeletonData&);
 }

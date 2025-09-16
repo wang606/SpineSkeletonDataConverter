@@ -1,5 +1,4 @@
-#include "SkeletonData38.h"
-using namespace spine38;
+#include "SkeletonData.h"
 
 namespace spine38 {
 
@@ -62,7 +61,10 @@ void writeCurve(const TimelineFrame& frame, Json& j) {
     if (frame.curveType == CurveType::CURVE_STEPPED) {
         j["curve"] = "stepped";
     } else if (frame.curveType == CurveType::CURVE_BEZIER) {
-        j["curve"] = frame.curve;
+        if (!frame.curve.empty()) j["curve"] = frame.curve[0];
+        if (frame.curve[1] != 0.0f) j["c2"] = frame.curve[1];
+        if (frame.curve[2] != 1.0f) j["c3"] = frame.curve[2];
+        if (frame.curve[3] != 1.0f) j["c4"] = frame.curve[3];
     }
 }
 
@@ -81,7 +83,8 @@ Json writeJsonData(const SkeletonData& skeletonData) {
     Json j = Json::object();
 
     Json skeleton = Json::object();
-    if (skeletonData.hash != 0) skeleton["hash"] = uint64ToBase64(skeletonData.hash);
+    if (skeletonData.hashString) skeleton["hash"] = skeletonData.hashString;
+    else if (skeletonData.hash != 0) skeleton["hash"] = uint64ToBase64(skeletonData.hash);
     if (skeletonData.version) skeleton["spine"] = skeletonData.version;
     skeleton["x"] = skeletonData.x;
     skeleton["y"] = skeletonData.y;
@@ -150,12 +153,10 @@ Json writeJsonData(const SkeletonData& skeletonData) {
         if (transform.skinRequired) transformJson["skin"] = transform.skinRequired;
         if (!transform.bones.empty()) transformJson["bones"] = transform.bones;
         if (transform.target) transformJson["target"] = transform.target;
-        if (transform.mixRotate != 1.0f) transformJson["mixRotate"] = transform.mixRotate;
-        if (transform.mixX != 1.0f) transformJson["mixX"] = transform.mixX;
-        if (transform.mixY != transform.mixX) transformJson["mixY"] = transform.mixY;
-        if (transform.mixScaleX != 1.0f) transformJson["mixScaleX"] = transform.mixScaleX;
-        if (transform.mixScaleY != transform.mixScaleX) transformJson["mixScaleY"] = transform.mixScaleY;
-        if (transform.mixShearY != 1.0f) transformJson["mixShearY"] = transform.mixShearY;
+        if (transform.mixRotate != 1.0f) transformJson["rotateMix"] = transform.mixRotate;
+        if (transform.mixX != 1.0f) transformJson["translateMix"] = transform.mixX;
+        if (transform.mixScaleX != 1.0f) transformJson["scaleMix"] = transform.mixScaleX;
+        if (transform.mixShearY != 1.0f) transformJson["shearMix"] = transform.mixShearY;
         if (transform.offsetRotation != 0.0f) transformJson["rotation"] = transform.offsetRotation;
         if (transform.offsetX != 0.0f) transformJson["x"] = transform.offsetX;
         if (transform.offsetY != 0.0f) transformJson["y"] = transform.offsetY;
@@ -181,9 +182,8 @@ Json writeJsonData(const SkeletonData& skeletonData) {
         if (path.offsetRotation != 0.0f) pathJson["rotation"] = path.offsetRotation;
         if (path.position != 0.0f) pathJson["position"] = path.position;
         if (path.spacing != 0.0f) pathJson["spacing"] = path.spacing;
-        if (path.mixRotate != 1.0f) pathJson["mixRotate"] = path.mixRotate;
-        if (path.mixX != 1.0f) pathJson["mixX"] = path.mixX;
-        if (path.mixY != path.mixX) pathJson["mixY"] = path.mixY;
+        if (path.mixRotate != 1.0f) pathJson["rotateMix"] = path.mixRotate;
+        if (path.mixX != 1.0f) pathJson["translateMix"] = path.mixX;
         j["path"].push_back(pathJson);
     }
 
@@ -307,45 +307,23 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                         slotJson["attachment"].push_back(frameJson);
                     }
                 }
-                if (slotMap.contains("rgba")) {
-                    for (const auto& frame : slotMap.at("rgba")) {
+                if (slotMap.contains("rgba") || slotMap.contains("rgb")) {
+                    for (const auto& frame : slotMap.contains("rgba") ? slotMap.at("rgba") : slotMap.at("rgb")) {
                         Json frameJson = Json::object();
                         if (frame.time != 0.0f) frameJson["time"] = frame.time;
                         if (frame.color1) frameJson["color"] = colorToString(frame.color1.value(), true);
                         writeCurve(frame, frameJson);
-                        slotJson["rgba"].push_back(frameJson);
+                        slotJson["color"].push_back(frameJson);
                     }
                 }
-                if (slotMap.contains("rgb")) {
-                    for (const auto& frame : slotMap.at("rgb")) {
-                        Json frameJson = Json::object();
-                        if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                        if (frame.color1) frameJson["color"] = colorToString(frame.color1.value(), false);
-                        writeCurve(frame, frameJson);
-                        slotJson["rgb"].push_back(frameJson);
-                    }
-                }
-                if (slotMap.contains("alpha")) {
-                    writeTimeline(slotMap.at("alpha"), slotJson["alpha"], 1, "value", "", 0.0f);
-                }
-                if (slotMap.contains("rgba2")) {
-                    for (const auto& frame : slotMap.at("rgba2")) {
+                if (slotMap.contains("rgba2") || slotMap.contains("rgb2")) {
+                    for (const auto& frame : slotMap.contains("rgba2") ? slotMap.at("rgba2") : slotMap.at("rgb2")) {
                         Json frameJson = Json::object();
                         if (frame.time != 0.0f) frameJson["time"] = frame.time;
                         if (frame.color1) frameJson["light"] = colorToString(frame.color1.value(), true);
                         if (frame.color2) frameJson["dark"] = colorToString(frame.color2.value(), false);
                         writeCurve(frame, frameJson);
-                        slotJson["rgba2"].push_back(frameJson);
-                    }
-                }
-                if (slotMap.contains("rgb2")) {
-                    for (const auto& frame : slotMap.at("rgb2")) {
-                        Json frameJson = Json::object();
-                        if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                        if (frame.color1) frameJson["light"] = colorToString(frame.color1.value(), false);
-                        if (frame.color2) frameJson["dark"] = colorToString(frame.color2.value(), false);
-                        writeCurve(frame, frameJson);
-                        slotJson["rgb2"].push_back(frameJson);
+                        slotJson["twoColor"].push_back(frameJson);
                     }
                 }
                 animationJson["slots"][slotName] = slotJson;
@@ -355,34 +333,16 @@ Json writeJsonData(const SkeletonData& skeletonData) {
             for (const auto& [boneName, boneMap] : animation.bones) {
                 Json boneJson = Json::object();
                 if (boneMap.contains("rotate")) {
-                    writeTimeline(boneMap.at("rotate"), boneJson["rotate"], 1, "value", "", 0.0f);
+                    writeTimeline(boneMap.at("rotate"), boneJson["rotate"], 1, "angle", "", 0.0f);
                 }
                 if (boneMap.contains("translate")) {
                     writeTimeline(boneMap.at("translate"), boneJson["translate"], 2, "x", "y", 0.0f);
                 }
-                if (boneMap.contains("translatex")) {
-                    writeTimeline(boneMap.at("translatex"), boneJson["translatex"], 1, "value", "", 0.0f);
-                }
-                if (boneMap.contains("translatey")) {
-                    writeTimeline(boneMap.at("translatey"), boneJson["translatey"], 1, "value", "", 0.0f);
-                }
                 if (boneMap.contains("scale")) {
                     writeTimeline(boneMap.at("scale"), boneJson["scale"], 2, "x", "y", 1.0f);
                 }
-                if (boneMap.contains("scalex")) {
-                    writeTimeline(boneMap.at("scalex"), boneJson["scalex"], 1, "value", "", 1.0f);
-                }
-                if (boneMap.contains("scaley")) {
-                    writeTimeline(boneMap.at("scaley"), boneJson["scaley"], 1, "value", "", 1.0f);
-                }
                 if (boneMap.contains("shear")) {
                     writeTimeline(boneMap.at("shear"), boneJson["shear"], 2, "x", "y", 0.0f);
-                }
-                if (boneMap.contains("shearx")) {
-                    writeTimeline(boneMap.at("shearx"), boneJson["shearx"], 1, "value", "", 0.0f);
-                }
-                if (boneMap.contains("sheary")) {
-                    writeTimeline(boneMap.at("sheary"), boneJson["sheary"], 1, "value", "", 0.0f);
                 }
                 animationJson["bones"][boneName] = boneJson;
             }
@@ -410,12 +370,10 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                 for (const auto& frame : transformTimeline) {
                     Json frameJson = Json::object();
                     if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                    if (frame.value1 != 1.0f) frameJson["mixRotate"] = frame.value1;
-                    if (frame.value2 != 1.0f) frameJson["mixX"] = frame.value2;
-                    if (frame.value3 != frame.value2) frameJson["mixY"] = frame.value3;
-                    if (frame.value4 != 1.0f) frameJson["mixScaleX"] = frame.value4;
-                    if (frame.value5 != frame.value4) frameJson["mixScaleY"] = frame.value5;
-                    if (frame.value6 != 1.0f) frameJson["mixShearY"] = frame.value6;
+                    if (frame.value1 != 1.0f) frameJson["rotateMix"] = frame.value1;
+                    if (frame.value2 != 1.0f) frameJson["translateMix"] = frame.value2;
+                    if (frame.value4 != 1.0f) frameJson["scaleMix"] = frame.value4;
+                    if (frame.value6 != 1.0f) frameJson["shearMix"] = frame.value6;
                     writeCurve(frame, frameJson);
                     transformJson.push_back(frameJson);
                 }
@@ -426,18 +384,17 @@ Json writeJsonData(const SkeletonData& skeletonData) {
             for (const auto& [pathName, pathMap] : animation.path) {
                 Json pathJson = Json::object();
                 if (pathMap.contains("position")) {
-                    writeTimeline(pathMap.at("position"), pathJson["position"], 1, "value", "", 0.0f);
+                    writeTimeline(pathMap.at("position"), pathJson["position"], 1, "position", "", 0.0f);
                 }
                 if (pathMap.contains("spacing")) {
-                    writeTimeline(pathMap.at("spacing"), pathJson["spacing"], 1, "value", "", 0.0f);
+                    writeTimeline(pathMap.at("spacing"), pathJson["spacing"], 1, "spacing", "", 0.0f);
                 }
                 if (pathMap.contains("mix")) {
                     for (const auto& frame : pathMap.at("mix")) {
                         Json frameJson = Json::object();
                         if (frame.time != 0.0f) frameJson["time"] = frame.time;
-                        if (frame.value1 != 1.0f) frameJson["mixRotate"] = frame.value1;
-                        if (frame.value2 != 1.0f) frameJson["mixX"] = frame.value2;
-                        if (frame.value3 != frame.value2) frameJson["mixY"] = frame.value3; 
+                        if (frame.value1 != 1.0f) frameJson["rotateMix"] = frame.value1;
+                        if (frame.value2 != 1.0f) frameJson["translateMix"] = frame.value2; 
                         writeCurve(frame, frameJson);
                         pathJson["mix"].push_back(frameJson);
                     }
@@ -449,8 +406,9 @@ Json writeJsonData(const SkeletonData& skeletonData) {
             for (const auto& [skinName, skinMap] : animation.attachments) {
                 for (const auto& [slotName, slotMap] : skinMap) {
                     for (const auto& [attachmentName, attachmentTimeline] : slotMap) {
+                        if (!attachmentTimeline.contains("deform")) continue;
                         Json attachmentJson = Json::array(); 
-                        for (const auto& frame : attachmentTimeline) {
+                        for (const auto& frame : attachmentTimeline.at("deform")) {
                             Json frameJson = Json::object();
                             if (frame.time != 0.0f) frameJson["time"] = frame.time;
                             if (!frame.vertices.empty()) {

@@ -1,5 +1,4 @@
-#include "SkeletonData38.h"
-using namespace spine38;
+#include "SkeletonData.h"
 
 namespace spine38 {
 
@@ -66,8 +65,11 @@ void readCurve(const Json& j, TimelineFrame& frame) {
         if (j["curve"] == "stepped") {
             frame.curveType = CurveType::CURVE_STEPPED;
         } else {
-            frame.curveType = CURVE_BEZIER; 
-            frame.curve = j["curve"].get<std::vector<float>>();
+            frame.curveType = CurveType::CURVE_BEZIER; 
+            frame.curve.push_back(j.value("curve", 0.0f)); 
+            frame.curve.push_back(j.value("c2", 0.0f)); 
+            frame.curve.push_back(j.value("c3", 1.0f));
+            frame.curve.push_back(j.value("c4", 1.0f));
         }
     }
 }
@@ -87,7 +89,10 @@ SkeletonData readJsonData(const Json& j) {
     SkeletonData skeletonData; 
 
     const auto& skeleton = j["skeleton"];
-    skeletonData.hash = skeleton.contains("hash") ? base64ToUint64(skeleton["hash"]) : 0;
+    if (skeleton.contains("hash")) {
+        skeletonData.hashString = skeleton["hash"];
+        skeletonData.hash = base64ToUint64(skeleton["hash"]);
+    }
     if (skeleton.contains("spine")) skeletonData.version = skeleton["spine"];
     skeletonData.x = skeleton.value("x", 0.0f);
     skeletonData.y = skeleton.value("y", 0.0f);
@@ -161,12 +166,12 @@ SkeletonData readJsonData(const Json& j) {
             transformData.skinRequired = transformJson.value("skin", false);
             if (transformJson.contains("bones")) transformData.bones = transformJson["bones"].get<std::vector<std::string>>();
             if (transformJson.contains("target")) transformData.target = transformJson["target"];
-            transformData.mixRotate = transformJson.value("mixRotate", 1.0f);
-            transformData.mixX = transformJson.value("mixX", 1.0f);
-            transformData.mixY = transformJson.value("mixY", transformData.mixX);
-            transformData.mixScaleX = transformJson.value("mixScaleX", 1.0f);
-            transformData.mixScaleY = transformJson.value("mixScaleY", transformData.mixScaleX);
-            transformData.mixShearY = transformJson.value("mixShearY", 1.0f);
+            transformData.mixRotate = transformJson.value("rotateMix", 1.0f);
+            transformData.mixX = transformJson.value("translateMix", 1.0f);
+            transformData.mixY = transformJson.value("translateMix", 1.0f);
+            transformData.mixScaleX = transformJson.value("scaleMix", 1.0f);
+            transformData.mixScaleY = transformJson.value("scaleMix", 1.0f);
+            transformData.mixShearY = transformJson.value("shearMix", 1.0f);
             transformData.offsetRotation = transformJson.value("rotation", 0.0f);
             transformData.offsetX = transformJson.value("x", 0.0f);
             transformData.offsetY = transformJson.value("y", 0.0f);
@@ -194,9 +199,9 @@ SkeletonData readJsonData(const Json& j) {
             pathData.offsetRotation = pathJson.value("rotation", 0.0f);
             pathData.position = pathJson.value("position", 0.0f);
             pathData.spacing = pathJson.value("spacing", 0.0f);
-            pathData.mixRotate = pathJson.value("mixRotate", 1.0f);
-            pathData.mixX = pathJson.value("mixX", 1.0f);
-            pathData.mixY = pathJson.value("mixY", pathData.mixX);
+            pathData.mixRotate = pathJson.value("rotateMix", 1.0f);
+            pathData.mixX = pathJson.value("translateMix", 1.0f);
+            pathData.mixY = pathJson.value("translateMix", 1.0f);
             skeletonData.pathConstraints.push_back(pathData);
         }
     }
@@ -335,8 +340,8 @@ SkeletonData readJsonData(const Json& j) {
                             slotTimeline["attachment"].push_back(frame);
                         }
                     }
-                    if (slotJson.contains("rgba")) {
-                        for (const auto& frameJson : slotJson["rgba"]) {
+                    if (slotJson.contains("color")) {
+                        for (const auto& frameJson : slotJson["color"]) {
                             TimelineFrame frame;
                             frame.time = frameJson.value("time", 0.0f);
                             if (frameJson.contains("color")) frame.color1 = stringToColor(frameJson["color"], true);
@@ -344,36 +349,14 @@ SkeletonData readJsonData(const Json& j) {
                             slotTimeline["rgba"].push_back(frame);
                         }
                     }
-                    if (slotJson.contains("rgb")) {
-                        for (const auto& frameJson : slotJson["rgb"]) {
-                            TimelineFrame frame;
-                            frame.time = frameJson.value("time", 0.0f);
-                            if (frameJson.contains("color")) frame.color1 = stringToColor(frameJson["color"], false);
-                            readCurve(frameJson, frame);
-                            slotTimeline["rgb"].push_back(frame);
-                        }
-                    }
-                    if (slotJson.contains("alpha")) {
-                        readTimeline(slotJson["alpha"], slotTimeline["alpha"], 1, "value", "", 0.0f);
-                    }
-                    if (slotJson.contains("rgba2")) {
-                        for (const auto& frameJson : slotJson["rgba2"]) {
+                    if (slotJson.contains("twoColor")) {
+                        for (const auto& frameJson : slotJson["twoColor"]) {
                             TimelineFrame frame;
                             frame.time = frameJson.value("time", 0.0f);
                             if (frameJson.contains("light")) frame.color1 = stringToColor(frameJson["light"], true);
                             if (frameJson.contains("dark")) frame.color2 = stringToColor(frameJson["dark"], false);
                             readCurve(frameJson, frame);
                             slotTimeline["rgba2"].push_back(frame);
-                        }
-                    }
-                    if (slotJson.contains("rgb2")) {
-                        for (const auto& frameJson : slotJson["rgb2"]) {
-                            TimelineFrame frame;
-                            frame.time = frameJson.value("time", 0.0f);
-                            if (frameJson.contains("light")) frame.color1 = stringToColor(frameJson["light"], false);
-                            if (frameJson.contains("dark")) frame.color2 = stringToColor(frameJson["dark"], false);
-                            readCurve(frameJson, frame);
-                            slotTimeline["rgb2"].push_back(frame);
                         }
                     }
                     animationData.slots[slotName] = slotTimeline;
@@ -383,34 +366,16 @@ SkeletonData readJsonData(const Json& j) {
                 for (const auto& [boneName, boneJson] : animationJson["bones"].items()) {
                     MultiTimeline boneTimeline;
                     if (boneJson.contains("rotate")) {
-                        readTimeline(boneJson["rotate"], boneTimeline["rotate"], 1, "value", "", 0.0f);
+                        readTimeline(boneJson["rotate"], boneTimeline["rotate"], 1, "angle", "", 0.0f);
                     }
                     if (boneJson.contains("translate")) {
                         readTimeline(boneJson["translate"], boneTimeline["translate"], 2, "x", "y", 0.0f);
                     }
-                    if (boneJson.contains("translatex")) {
-                        readTimeline(boneJson["translatex"], boneTimeline["translatex"], 1, "value", "", 0.0f);
-                    }
-                    if (boneJson.contains("translatey")) {
-                        readTimeline(boneJson["translatey"], boneTimeline["translatey"], 1, "value", "", 0.0f);
-                    }
                     if (boneJson.contains("scale")) {
                         readTimeline(boneJson["scale"], boneTimeline["scale"], 2, "x", "y", 1.0f);
                     }
-                    if (boneJson.contains("scalex")) {
-                        readTimeline(boneJson["scalex"], boneTimeline["scalex"], 1, "value", "", 1.0f);
-                    }
-                    if (boneJson.contains("scaley")) {
-                        readTimeline(boneJson["scaley"], boneTimeline["scaley"], 1, "value", "", 1.0f);
-                    }
                     if (boneJson.contains("shear")) {
                         readTimeline(boneJson["shear"], boneTimeline["shear"], 2, "x", "y", 0.0f);
-                    }
-                    if (boneJson.contains("shearx")) {
-                        readTimeline(boneJson["shearx"], boneTimeline["shearx"], 1, "value", "", 0.0f);
-                    }
-                    if (boneJson.contains("sheary")) {
-                        readTimeline(boneJson["sheary"], boneTimeline["sheary"], 1, "value", "", 0.0f);
                     }
                     animationData.bones[boneName] = boneTimeline;
                 }
@@ -438,12 +403,12 @@ SkeletonData readJsonData(const Json& j) {
                     for (const auto& frameJson : transformJson) {
                         TimelineFrame frame;
                         frame.time = frameJson.value("time", 0.0f);
-                        frame.value1 = frameJson.value("mixRotate", 1.0f);
-                        frame.value2 = frameJson.value("mixX", 1.0f); 
-                        frame.value3 = frameJson.value("mixY", frame.value2);
-                        frame.value4 = frameJson.value("mixScaleX", 1.0f);
-                        frame.value5 = frameJson.value("mixScaleY", frame.value4);
-                        frame.value6 = frameJson.value("mixShearY", 1.0f);
+                        frame.value1 = frameJson.value("rotateMix", 1.0f);
+                        frame.value2 = frameJson.value("translateMix", 1.0f); 
+                        frame.value3 = frame.value2; 
+                        frame.value4 = frameJson.value("scaleMix", 1.0f);
+                        frame.value5 = frame.value4; 
+                        frame.value6 = frameJson.value("shearMix", 1.0f);
                         readCurve(frameJson, frame);
                         transformTimeline.push_back(frame);
                     }
@@ -454,18 +419,18 @@ SkeletonData readJsonData(const Json& j) {
                 for (const auto& [pathName, pathJson] : animationJson["path"].items()) {
                     MultiTimeline pathTimeline;
                     if (pathJson.contains("position")) {
-                        readTimeline(pathJson["position"], pathTimeline["position"], 1, "value", "", 0.0f);
+                        readTimeline(pathJson["position"], pathTimeline["position"], 1, "position", "", 0.0f);
                     }
                     if (pathJson.contains("spacing")) {
-                        readTimeline(pathJson["spacing"], pathTimeline["spacing"], 1, "value", "", 0.0f);
+                        readTimeline(pathJson["spacing"], pathTimeline["spacing"], 1, "spacing", "", 0.0f);
                     }
                     if (pathJson.contains("mix")) {
                         for (const auto& frameJson : pathJson["mix"]) {
                             TimelineFrame frame;
                             frame.time = frameJson.value("time", 0.0f);
-                            frame.value1 = frameJson.value("mixRotate", 1.0f);
-                            frame.value2 = frameJson.value("mixX", 1.0f);
-                            frame.value3 = frameJson.value("mixY", frame.value2);
+                            frame.value1 = frameJson.value("rotateMix", 1.0f);
+                            frame.value2 = frameJson.value("translateMix", 1.0f);
+                            frame.value3 = frameJson.value("translateMix", 1.0f);
                             readCurve(frameJson, frame);
                             pathTimeline["mix"].push_back(frame);
                         }
@@ -488,13 +453,13 @@ SkeletonData readJsonData(const Json& j) {
                                 readCurve(frameJson, frame);
                                 attachmentTimeline.push_back(frame);
                             }
-                            animationData.attachments[skinName][slotName][attachmentName] = attachmentTimeline;
+                            animationData.attachments[skinName][slotName][attachmentName]["deform"] = attachmentTimeline;
                         }
                     }
                 }
             }
-            if (animationJson.contains("drawOrder")) {
-                for (const auto& frameJson : animationJson["drawOrder"]) {
+            if (animationJson.contains("drawOrder") || animationJson.contains("draworder")) {
+                for (const auto& frameJson : animationJson.contains("drawOrder") ? animationJson["drawOrder"] : animationJson["draworder"]) {
                     TimelineFrame frame;
                     frame.time = frameJson.value("time", 0.0f);
                     if (frameJson.contains("offsets")) {

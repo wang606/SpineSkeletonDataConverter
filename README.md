@@ -2,9 +2,9 @@
 
 > ⚠️ **Development Warning**  
 >
-> This repository is under active development and features may be unstable.
+> Version conversion functionality has not been thoroughly tested.
 
-A powerful command-line tool for converting Spine skeleton data between different formats, with automatic version detection and support for multiple Spine runtime versions.
+A powerful command-line tool for converting Spine skeleton data between different formats and different versions, with automatic version detection and support for multiple Spine runtime versions.
 
 ## ✨ Features
 
@@ -17,12 +17,10 @@ A powerful command-line tool for converting Spine skeleton data between differen
 
 |           | 3.7 | 3.8 | 4.0 | 4.1 | 4.2 |
 | --------- | --- | --- | --- | --- | --- |
-| JSON Reader | 🚧 | 🚧 | 🚧 | ✅ | ✅  |
+| JSON Reader | ✅ | ✅ | ✅ | ✅ | ✅  |
 | JSON Writer | ✅ | ✅ | ✅ | ✅ | ✅  |
 | Binary Reader | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Binary Writer | 🚧 | 🚧 | 🚧 | ✅ | ✅ |
-| Convert to the next version | 🚧 | 🚧 | 🚧 | 🚧 | ❌ |
-| Convert to the previous version | ❌ | 🚧 | 🚧 | 🚧 | 🚧 |
+| Binary Writer | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **Legend**: ✅ Supported | 🚧 In Development | ❌ Not Supported
 
@@ -46,13 +44,28 @@ cmake --build . --config Release
 ### Usage
 
 ```bash
-# Basic usage
+# Basic format conversion (same version)
 ./build/Release/SpineSkeletonDataConverter.exe input.skel output.json --in-skel --out-json
 
 # The tool auto-detects file formats from extensions
 ./build/Release/SpineSkeletonDataConverter.exe input.json output.skel
 
-# Version detection is automatic based on file content
+# Cross-version conversion (convert 3.7 file to 4.2 format)
+./build/Release/SpineSkeletonDataConverter.exe input37.json output42.json --out-version 4.2
+
+# Convert new binary format to old version
+./build/Release/SpineSkeletonDataConverter.exe new.skel old.json --out-version 3.8
+
+# Available options:
+#   --in-json       Input file is in JSON format
+#   --in-skel       Input file is in SKEL (binary) format  
+#   --out-json      Output file should be in JSON format
+#   --out-skel      Output file should be in SKEL (binary) format
+#   --out-version   Output version (3.7, 3.8, 4.0, 4.1, 4.2)
+#   --help          Show help message
+
+# Input version detection is automatic based on file content
+# Output version defaults to input version unless specified with --out-version
 ```
 
 ## 🧪 Testing

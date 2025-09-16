@@ -1,5 +1,4 @@
-#include "SkeletonData40.h"
-using namespace spine40; 
+#include "SkeletonData.h"
 
 namespace spine40 {
 
@@ -448,9 +447,10 @@ Json writeJsonData(const SkeletonData& skeletonData) {
         if (!animation.attachments.empty()) {
             for (const auto& [skinName, skinMap] : animation.attachments) {
                 for (const auto& [slotName, slotMap] : skinMap) {
-                    for (const auto& [attachmentName, attachmentTimeline] : slotMap) {
+                    for (const auto& [attachmentName, attachmentMap] : slotMap) {
+                        if (!attachmentMap.contains("deform")) continue;
                         Json attachmentJson = Json::array(); 
-                        for (const auto& frame : attachmentTimeline) {
+                        for (const auto& frame : attachmentMap.at("deform")) {
                             Json frameJson = Json::object();
                             if (frame.time != 0.0f) frameJson["time"] = frame.time;
                             if (!frame.vertices.empty()) {

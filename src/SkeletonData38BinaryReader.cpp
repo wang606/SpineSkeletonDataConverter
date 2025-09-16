@@ -1,12 +1,6 @@
-#include "SkeletonData38.h"
-using namespace spine38;
+#include "SkeletonData.h"
 
 namespace spine38 {
-
-struct DataInput {
-    const unsigned char* cursor;
-    const unsigned char* end;
-};
 
 unsigned char readByte(DataInput* input) {
     return *input->cursor++;
@@ -117,43 +111,31 @@ void readVertices(DataInput* input, std::vector<float>& vertices, int vertexCoun
     }
 }
 
-void readCurve(DataInput* input, TimelineFrame& frame, int timelineCount) {
-    for (int i = 0; i < timelineCount * 4; i++) {
-        frame.curve.push_back(readFloat(input));
+void readCurve(DataInput* input, TimelineFrame& frame) {
+    switch (readByte(input)) {
+        case CURVE_STEPPED: {
+            frame.curveType = CurveType::CURVE_STEPPED;
+            break; 
+        }
+        case CURVE_BEZIER: {
+            frame.curveType = CurveType::CURVE_BEZIER;
+            frame.curve.push_back(readFloat(input));
+            frame.curve.push_back(readFloat(input));
+            frame.curve.push_back(readFloat(input));
+            frame.curve.push_back(readFloat(input));
+            break; 
+        }
     }
 }
 
 Timeline readTimeline(DataInput* input, int frameCount, int valueNum) {
     Timeline timeline;
-    float time = readFloat(input);
-    float value1 = readFloat(input);
-    float value2 = valueNum > 1 ? readFloat(input) : 0.0f;
-    float value3 = valueNum > 2 ? readFloat(input) : 0.0f;
-    for (int frameIndex = 0; ; frameIndex++) {
+    for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
         TimelineFrame frame; 
-        frame.time = time; 
-        frame.value1 = value1; 
-        if (valueNum > 1) frame.value2 = value2; 
-        if (valueNum > 2) frame.value3 = value3;
-        if (frameIndex == frameCount - 1) {
-            timeline.push_back(frame);
-            break;
-        }
-        time = readFloat(input);
-        value1 = readFloat(input);
-        if (valueNum > 1) value2 = readFloat(input);
-        if (valueNum > 2) value3 = readFloat(input);
-        switch (readSByte(input)) {
-            case CURVE_STEPPED: {
-                frame.curveType = CurveType::CURVE_STEPPED;
-                break; 
-            }
-            case CURVE_BEZIER: {
-                frame.curveType = CurveType::CURVE_BEZIER; 
-                readCurve(input, frame, valueNum);
-                break; 
-            }
-        }
+        frame.time = readFloat(input); 
+        frame.value1 = readFloat(input); 
+        if (valueNum > 1) frame.value2 = readFloat(input);
+        if (frameIndex < frameCount - 1) readCurve(input, frame);
         timeline.push_back(frame);
     }
     return timeline;
@@ -304,15 +286,14 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
 Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
     Animation animation; 
     animation.name = readString(input).value();
-    int numTimelines = readVarint(input, true);
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         std::string slotName = skeletonData->slots[readVarint(input, true)].name.value();
         MultiTimeline slotTimeline; 
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
-            SlotTimelineType timelineType = static_cast<SlotTimelineType>(readByte(input));
+            int timelineType = static_cast<int>(readByte(input));
             int frameCount = readVarint(input, true);
             switch (timelineType) {
-                case SlotTimelineType::SLOT_ATTACHMENT: {
+                case 0: {  // SLOT_ATTACHMENT
                     Timeline timeline;
                     for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
                         TimelineFrame frame; 
@@ -323,166 +304,34 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
                     slotTimeline["attachment"] = timeline;
                     break; 
                 }
-                case SlotTimelineType::SLOT_RGBA: {
+                case 1: {  // SLOT_COLOR
                     Timeline timeline;
-                    int bezierCount = readVarint(input, true);
-                    float time = readFloat(input);
-                    Color color = readColor(input);
-                    for (int frameIndex = 0; ; frameIndex++) {
+                    for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
                         TimelineFrame frame; 
-                        frame.time = time; 
-                        frame.color1 = color; 
-                        if (frameIndex == frameCount - 1) {
-                            timeline.push_back(frame);
-                            break;
-                        }
-                        time = readFloat(input);
-                        color = readColor(input);
-                        switch (readSByte(input)) {
-                            case CURVE_STEPPED: {
-                                frame.curveType = CurveType::CURVE_STEPPED;
-                                break; 
-                            }
-                            case CURVE_BEZIER: {
-                                frame.curveType = CurveType::CURVE_BEZIER;
-                                readCurve(input, frame, 4);
-                                break; 
-                            }
-                        }
+                        frame.time = readFloat(input); 
+                        frame.color1 = readColor(input);
+                        if (frameIndex < frameCount - 1) readCurve(input, frame);
                         timeline.push_back(frame);
                     }
                     slotTimeline["rgba"] = timeline;
                     break; 
                 }
-                case SlotTimelineType::SLOT_RGB: {
+                case 2: {  // SLOT_TWO_COLOR
                     Timeline timeline;
-                    int bezierCount = readVarint(input, true);
-                    float time = readFloat(input);
-                    Color color = readColor(input, false);
-                    for (int frameIndex = 0; ; frameIndex++) {
+                    for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
                         TimelineFrame frame; 
-                        frame.time = time; 
-                        frame.color1 = color; 
-                        if (frameIndex == frameCount - 1) {
-                            timeline.push_back(frame);
-                            break;
-                        }
-                        time = readFloat(input);
-                        color = readColor(input, false);
-                        switch (readSByte(input)) {
-                            case CURVE_STEPPED: {
-                                frame.curveType = CurveType::CURVE_STEPPED;
-                                break; 
-                            }
-                            case CURVE_BEZIER: {
-                                frame.curveType = CurveType::CURVE_BEZIER;
-                                readCurve(input, frame, 3);
-                                break; 
-                            }
-                        }
-                        timeline.push_back(frame);
-                    }
-                    slotTimeline["rgb"] = timeline;
-                    break; 
-                }
-                case SlotTimelineType::SLOT_RGBA2: {
-                    Timeline timeline;
-                    int bezierCount = readVarint(input, true);
-                    float time = readFloat(input);
-                    Color light = readColor(input);
-                    Color dark = readColor(input, false);
-                    for (int frameIndex = 0; ; frameIndex++) {
-                        TimelineFrame frame; 
-                        frame.time = time; 
-                        frame.color1 = light; 
-                        frame.color2 = dark; 
-                        if (frameIndex == frameCount - 1) {
-                            timeline.push_back(frame);
-                            break;
-                        }
-                        time = readFloat(input);
-                        light = readColor(input);
-                        dark = readColor(input, false);
-                        switch (readSByte(input)) {
-                            case CURVE_STEPPED: {
-                                frame.curveType = CurveType::CURVE_STEPPED;
-                                break; 
-                            }
-                            case CURVE_BEZIER: {
-                                frame.curveType = CurveType::CURVE_BEZIER;
-                                readCurve(input, frame, 7);
-                                break; 
-                            }
-                        }
+                        frame.time = readFloat(input);
+                        frame.color1 = readColor(input);
+                        unsigned char a = readByte(input);
+                        unsigned char r = readByte(input);
+                        unsigned char g = readByte(input);
+                        unsigned char b = readByte(input);
+                        frame.color2 = Color{r, g, b, a};
+                        if (frameIndex < frameCount - 1) readCurve(input, frame);
                         timeline.push_back(frame);
                     }
                     slotTimeline["rgba2"] = timeline;
                     break; 
-                }
-                case SlotTimelineType::SLOT_RGB2: {
-                    Timeline timeline;
-                    int bezierCount = readVarint(input, true);
-                    float time = readFloat(input);
-                    Color light = readColor(input, false);
-                    Color dark = readColor(input, false);
-                    for (int frameIndex = 0; ; frameIndex++) {
-                        TimelineFrame frame; 
-                        frame.time = time; 
-                        frame.color1 = light; 
-                        frame.color2 = dark; 
-                        if (frameIndex == frameCount - 1) {
-                            timeline.push_back(frame);
-                            break;
-                        }
-                        time = readFloat(input);
-                        light = readColor(input, false);
-                        dark = readColor(input, false);
-                        switch (readSByte(input)) {
-                            case CURVE_STEPPED: {
-                                frame.curveType = CurveType::CURVE_STEPPED;
-                                break; 
-                            }
-                            case CURVE_BEZIER: {
-                                frame.curveType = CurveType::CURVE_BEZIER;
-                                readCurve(input, frame, 6);
-                                break; 
-                            }
-                        }
-                        timeline.push_back(frame);
-                    }
-                    slotTimeline["rgb2"] = timeline;
-                    break; 
-                }
-                case SlotTimelineType::SLOT_ALPHA: {
-                    Timeline timeline;
-                    int bezierCount = readVarint(input, true);
-                    float time = readFloat(input);
-                    float alpha = readByte(input) / 255.0f; 
-                    for (int frameIndex = 0; ; frameIndex++) {
-                        TimelineFrame frame; 
-                        frame.time = time; 
-                        frame.value1 = alpha; 
-                        if (frameIndex == frameCount - 1) {
-                            timeline.push_back(frame);
-                            break;
-                        }
-                        time = readFloat(input);
-                        alpha = readByte(input) / 255.0f; 
-                        switch (readSByte(input)) {
-                            case CURVE_STEPPED: {
-                                frame.curveType = CurveType::CURVE_STEPPED;
-                                break; 
-                            }
-                            case CURVE_BEZIER: {
-                                frame.curveType = CurveType::CURVE_BEZIER;
-                                readCurve(input, frame, 1);
-                                break; 
-                            }
-                        }
-                        timeline.push_back(frame);
-                    }
-                    slotTimeline["alpha"] = timeline;
-                    break;
                 }
             }
         }
@@ -492,48 +341,23 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         std::string boneName = skeletonData->bones[readVarint(input, true)].name.value();
         MultiTimeline boneTimeline;
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
-            BoneTimelineType timelineType = static_cast<BoneTimelineType>(readByte(input));
+            int timelineType = static_cast<int>(readByte(input));
             int frameCount = readVarint(input, true);
-            int bezierCount = readVarint(input, true);
             switch (timelineType) {
-                case BONE_ROTATE: {
+                case 0: {  // BONE_ROTATE
                     boneTimeline["rotate"] = readTimeline(input, frameCount, 1);
                     break;
                 }
-                case BONE_TRANSLATE: {
+                case 1: {  // BONE_TRANSLATE
                     boneTimeline["translate"] = readTimeline(input, frameCount, 2);
                     break;
                 }
-                case BONE_TRANSLATEX: {
-                    boneTimeline["translatex"] = readTimeline(input, frameCount, 1);
-                    break;
-                }
-                case BONE_TRANSLATEY: {
-                    boneTimeline["translatey"] = readTimeline(input, frameCount, 1);
-                    break;
-                }
-                case BONE_SCALE: {
+                case 2: {  // BONE_SCALE
                     boneTimeline["scale"] = readTimeline(input, frameCount, 2);
                     break;
                 }
-                case BONE_SCALEX: {
-                    boneTimeline["scalex"] = readTimeline(input, frameCount, 1);
-                    break;
-                }
-                case BONE_SCALEY: {
-                    boneTimeline["scaley"] = readTimeline(input, frameCount, 1);
-                    break;
-                }
-                case BONE_SHEAR: {
+                case 3: {  // BONE_SHEAR
                     boneTimeline["shear"] = readTimeline(input, frameCount, 2);
-                    break;
-                }
-                case BONE_SHEARX: {
-                    boneTimeline["shearx"] = readTimeline(input, frameCount, 1);
-                    break;
-                }
-                case BONE_SHEARY: {
-                    boneTimeline["sheary"] = readTimeline(input, frameCount, 1);
                     break;
                 }
             }
@@ -543,37 +367,16 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         std::string ikName = skeletonData->ikConstraints[readVarint(input, true)].name.value();
         int frameCount = readVarint(input, true);
-        int bezierCount = readVarint(input, true);
         Timeline timeline;
-        float time = readFloat(input);
-        float mix = readFloat(input);
-        float softness = readFloat(input);
-        for (int frameIndex = 0; ; frameIndex++) {
+        for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
             TimelineFrame frame; 
-            frame.time = time; 
-            frame.value1 = mix; 
-            frame.value2 = softness; 
+            frame.time = readFloat(input);
+            frame.value1 = readFloat(input); 
+            frame.value2 = readFloat(input); 
             frame.bendPositive = readSByte(input) > 0;
             frame.compress = readBoolean(input);
             frame.stretch = readBoolean(input);
-            if (frameIndex == frameCount - 1) {
-                timeline.push_back(frame);
-                break;
-            }
-            time = readFloat(input);
-            mix = readFloat(input);
-            softness = readFloat(input);
-            switch (readSByte(input)) {
-                case CURVE_STEPPED: {
-                    frame.curveType = CurveType::CURVE_STEPPED;
-                    break;
-                }
-                case CURVE_BEZIER: {
-                    frame.curveType = CurveType::CURVE_BEZIER;
-                    readCurve(input, frame, 2);
-                    break;
-                }
-            }
+            if (frameIndex < frameCount - 1) readCurve(input, frame);
             timeline.push_back(frame);
         }
         animation.ik[ikName] = timeline;
@@ -581,46 +384,17 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         std::string transformName = skeletonData->transformConstraints[readVarint(input, true)].name.value();
         int frameCount = readVarint(input, true);
-        int bezierCount = readVarint(input, true);
         Timeline timeline;
-        float time = readFloat(input);
-        float mixRotate = readFloat(input);
-        float mixX = readFloat(input);
-        float mixY = readFloat(input);
-        float mixScaleX = readFloat(input);
-        float mixScaleY = readFloat(input);
-        float mixShearY = readFloat(input);
-        for (int frameIndex = 0; ; frameIndex++) {
+        for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
             TimelineFrame frame; 
-            frame.time = time; 
-            frame.value1 = mixRotate; 
-            frame.value2 = mixX; 
-            frame.value3 = mixY; 
-            frame.value4 = mixScaleX; 
-            frame.value5 = mixScaleY; 
-            frame.value6 = mixShearY; 
-            if (frameIndex == frameCount - 1) {
-                timeline.push_back(frame);
-                break;
-            }
-            time = readFloat(input);
-            mixRotate = readFloat(input);
-            mixX = readFloat(input);
-            mixY = readFloat(input);
-            mixScaleX = readFloat(input);
-            mixScaleY = readFloat(input);
-            mixShearY = readFloat(input);
-            switch (readSByte(input)) {
-                case CURVE_STEPPED: {
-                    frame.curveType = CurveType::CURVE_STEPPED;
-                    break; 
-                }
-                case CURVE_BEZIER: {
-                    frame.curveType = CurveType::CURVE_BEZIER;
-                    readCurve(input, frame, 6);
-                    break; 
-                }
-            }
+            frame.time = readFloat(input); 
+            frame.value1 = readFloat(input); 
+            frame.value2 = readFloat(input); 
+            frame.value3 = frame.value2; 
+            frame.value4 = readFloat(input);
+            frame.value5 = frame.value4; 
+            frame.value6 = readFloat(input);
+            if (frameIndex < frameCount - 1) readCurve(input, frame);
             timeline.push_back(frame);
         }
         animation.transform[transformName] = timeline;
@@ -631,7 +405,6 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             PathTimelineType timelineType = static_cast<PathTimelineType>(readSByte(input));
             int frameCount = readVarint(input, true);
-            int bezierCount = readVarint(input, true);
             switch (timelineType) {
                 case PATH_POSITION: {
                     pathTimeline["position"] = readTimeline(input, frameCount, 1);
@@ -642,7 +415,17 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
                     break;
                 }
                 case PATH_MIX: {
-                    pathTimeline["mix"] = readTimeline(input, frameCount, 3);
+                    Timeline timeline; 
+                    for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+                        TimelineFrame frame; 
+                        frame.time = readFloat(input); 
+                        frame.value1 = readFloat(input); 
+                        frame.value2 = readFloat(input); 
+                        frame.value3 = frame.value2; 
+                        if (frameIndex < frameCount - 1) readCurve(input, frame);
+                        timeline.push_back(frame);
+                    }
+                    pathTimeline["mix"] = timeline;
                     break; 
                 }
             }
@@ -657,11 +440,9 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
                 std::string attachmentName = readStringRef(input, skeletonData).value();
                 Timeline attachmentTimeline;
                 int frameCount = readVarint(input, true);
-                int bezierCount = readVarint(input, true);
-                float time = readFloat(input);
-                for (int frameIndex = 0; ; frameIndex++) {
+                for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
                     TimelineFrame frame; 
-                    frame.time = time; 
+                    frame.time = readFloat(input);
                     size_t end = (size_t) readVarint(input, true);
                     if (end != 0) {
                         size_t start = (size_t) readVarint(input, true);
@@ -670,25 +451,10 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
                         for (size_t v = start; v < end; v++)
                             frame.vertices.push_back(readFloat(input));
                     }
-                    if (frameIndex == frameCount - 1) {
-                        attachmentTimeline.push_back(frame);
-                        break; 
-                    }
-                    time = readFloat(input);
-                    switch (readSByte(input)) {
-                        case CURVE_STEPPED: {
-                            frame.curveType = CurveType::CURVE_STEPPED;
-                            break; 
-                        }
-                        case CURVE_BEZIER: {
-                            frame.curveType = CurveType::CURVE_BEZIER;
-                            readCurve(input, frame, 1);
-                            break;
-                        }
-                    }
+                    if (frameIndex < frameCount - 1) readCurve(input, frame);
                     attachmentTimeline.push_back(frame);
                 }
-                animation.attachments[skinName][slotName][attachmentName] = attachmentTimeline;
+                animation.attachments[skinName][slotName][attachmentName]["deform"] = attachmentTimeline;
             }
         }
     }
@@ -731,9 +497,8 @@ SkeletonData readBinaryData(const Binary& binary) {
     input.cursor = binary.data(); 
     input.end = binary.data() + binary.size();
 
-    uint64_t lowHash = (uint64_t) readInt(&input); 
-    uint64_t highHash = (uint64_t) readInt(&input);
-    skeletonData.hash = highHash << 32 | (lowHash & 0xffffffff);
+    skeletonData.hashString = readString(&input).value();
+    skeletonData.hash = base64ToUint64(skeletonData.hashString.value());
     skeletonData.version = readString(&input).value();
 
     skeletonData.x = readFloat(&input); 
@@ -784,10 +549,10 @@ SkeletonData readBinaryData(const Binary& binary) {
         slotData.bone = skeletonData.bones[readVarint(&input, true)].name;
         Color color = readColor(&input);
         if (color != Color{0xff, 0xff, 0xff, 0xff}) slotData.color = color;
-        unsigned char a = readByte(&input);
         unsigned char r = readByte(&input);
         unsigned char g = readByte(&input);
         unsigned char b = readByte(&input);
+        unsigned char a = readByte(&input);
         if (!(r == 0xff && g == 0xff && b == 0xff && a == 0xff)) {
             slotData.darkColor = Color{ r, g, b, a }; 
         }
@@ -837,9 +602,9 @@ SkeletonData readBinaryData(const Binary& binary) {
         transformData.offsetShearY = readFloat(&input);
         transformData.mixRotate = readFloat(&input);
         transformData.mixX = readFloat(&input);
-        transformData.mixY = readFloat(&input);
+        transformData.mixY = transformData.mixX;
         transformData.mixScaleX = readFloat(&input);
-        transformData.mixScaleY = readFloat(&input);
+        transformData.mixScaleY = transformData.mixScaleX; 
         transformData.mixShearY = readFloat(&input);
         skeletonData.transformConstraints.push_back(transformData);
     }
@@ -863,7 +628,7 @@ SkeletonData readBinaryData(const Binary& binary) {
         pathData.spacing = readFloat(&input);
         pathData.mixRotate = readFloat(&input);
         pathData.mixX = readFloat(&input);
-        pathData.mixY = readFloat(&input);
+        pathData.mixY = pathData.mixX;
         skeletonData.pathConstraints.push_back(pathData);
     }
 

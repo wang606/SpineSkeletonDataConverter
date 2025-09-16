@@ -1,5 +1,4 @@
-#include "SkeletonData41.h"
-using namespace spine41;
+#include "SkeletonData.h"
 
 namespace spine41 {
 

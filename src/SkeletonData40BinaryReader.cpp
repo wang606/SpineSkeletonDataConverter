@@ -1,5 +1,4 @@
-#include "SkeletonData40.h"
-using namespace spine40;
+#include "SkeletonData.h"
 
 namespace spine40 {
 
@@ -688,7 +687,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
                     }
                     attachmentTimeline.push_back(frame);
                 }
-                animation.attachments[skinName][slotName][attachmentName] = attachmentTimeline;
+                animation.attachments[skinName][slotName][attachmentName]["deform"] = attachmentTimeline;
             }
         }
     }

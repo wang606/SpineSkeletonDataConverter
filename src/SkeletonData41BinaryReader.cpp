@@ -1,12 +1,6 @@
-#include "SkeletonData41.h"
-using namespace spine41;
+#include "SkeletonData.h"
 
 namespace spine41 {
-
-struct DataInput {
-    const unsigned char* cursor;
-    const unsigned char* end;
-};
 
 unsigned char readByte(DataInput* input) {
     return *input->cursor++;
