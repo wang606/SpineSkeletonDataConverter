@@ -29,6 +29,7 @@ struct ConversionOptions {
     FileFormat inputFormat = FileFormat::Unknown;
     FileFormat outputFormat = FileFormat::Unknown;
     SpineVersion outputVersion = SpineVersion::Invalid;
+    std::string outputVersionString; // 完整的版本号字符串，如 "4.2.11"
     bool help = false;
 };
 
@@ -83,17 +84,29 @@ std::string getVersionString(SpineVersion version) {
 }
 
 SpineVersion parseVersionString(const std::string& versionStr) {
-    if (versionStr == "3.7") return SpineVersion::Version37;
-    else if (versionStr == "3.8") return SpineVersion::Version38;
-    else if (versionStr == "4.0") return SpineVersion::Version40;
-    else if (versionStr == "4.1") return SpineVersion::Version41;
-    else if (versionStr == "4.2") return SpineVersion::Version42;
-    else return SpineVersion::Invalid;
+    // 强制要求完整的三段式版本号 (x.y.z)
+    std::regex versionRegex(R"(^(\d+)\.(\d+)\.(\d+)$)");
+    std::smatch match;
+    
+    if (std::regex_match(versionStr, match, versionRegex)) {
+        std::string majorVersion = match[1].str();
+        std::string minorVersion = match[2].str();
+        std::string majorMinor = majorVersion + "." + minorVersion;
+        
+        if (majorMinor == "3.7") return SpineVersion::Version37;
+        else if (majorMinor == "3.8") return SpineVersion::Version38;
+        else if (majorMinor == "4.0") return SpineVersion::Version40;
+        else if (majorMinor == "4.1") return SpineVersion::Version41;
+        else if (majorMinor == "4.2") return SpineVersion::Version42;
+    }
+    
+    return SpineVersion::Invalid;
 }
 
 bool convertFile(const std::string& inputFile, const std::string& outputFile, 
                 FileFormat inputFormat, FileFormat outputFormat, 
-                SpineVersion inputVersion, SpineVersion outputVersion) {
+                SpineVersion inputVersion, SpineVersion outputVersion, 
+                const std::string& outputVersionString) {
     
     try {
         // Read input file
@@ -162,6 +175,11 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
             default:
                 std::cerr << "Error: Unsupported input Spine version\n";
                 return false;
+        }
+        
+        // 如果指定了输出版本字符串，则设置版本号
+        if (!outputVersionString.empty()) {
+            skelData.version = outputVersionString;
         }
         
         // Write data using output version
@@ -286,15 +304,17 @@ void printUsage(const char* programName) {
     std::cout << "  --in-skel       Input file is in SKEL (binary) format\n";
     std::cout << "  --out-json      Output file should be in JSON format\n";
     std::cout << "  --out-skel      Output file should be in SKEL (binary) format\n";
-    std::cout << "  --out-version   Output version (3.7, 3.8, 4.0, 4.1, 4.2)\n";
+    std::cout << "  --out-version   Output version (must be complete: x.y.z format)\n";
     std::cout << "  --help          Show this help message\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName << " input.skel output.json --in-skel --out-json\n";
     std::cout << "  " << programName << " input.json output.skel --in-json --out-skel\n";
-    std::cout << "  " << programName << " input37.json output42.skel --out-version 4.2\n\n";
-    std::cout << "Supported Spine versions: 3.7, 3.8, 4.0, 4.1, 4.2\n";
+    std::cout << "  " << programName << " input37.json output42.skel --out-version 4.2.11\n\n";
+    std::cout << "Supported Spine versions: 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x\n";
+    std::cout << "Note: Version must be specified in complete x.y.z format (e.g., 4.2.11, not 4.2)\n";
     std::cout << "Input version detection is automatic based on file content.\n";
     std::cout << "Output version defaults to input version unless specified with --out-version.\n";
+    std::cout << "When --out-version is specified, the SkeletonData.version field will be updated.\n";
 }
 
 ConversionOptions parseArguments(int argc, char* argv[]) {
@@ -320,10 +340,13 @@ ConversionOptions parseArguments(int argc, char* argv[]) {
             options.outputFormat = FileFormat::Skel;
         } else if (arg == "--out-version") {
             if (i + 1 < argc) {
-                options.outputVersion = parseVersionString(argv[++i]);
+                std::string versionStr = argv[++i];
+                options.outputVersionString = versionStr; // 保存完整版本号字符串
+                options.outputVersion = parseVersionString(versionStr);
                 if (options.outputVersion == SpineVersion::Invalid) {
-                    std::cerr << "Error: Invalid output version: " << argv[i] << "\n";
-                    std::cerr << "Supported versions: 3.7, 3.8, 4.0, 4.1, 4.2\n";
+                    std::cerr << "Error: Invalid output version: " << versionStr << "\n";
+                    std::cerr << "Please specify complete version number (e.g., 3.7.94, 4.2.11)\n";
+                    std::cerr << "Supported major versions: 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x\n";
                     options.help = true;
                 }
             } else {
@@ -394,15 +417,20 @@ int main(int argc, char* argv[]) {
     
     // Use output version if specified, otherwise use input version
     SpineVersion outputVersion = (options.outputVersion != SpineVersion::Invalid) ? options.outputVersion : inputVersion;
+    std::string outputVersionString = options.outputVersionString; // 使用用户指定的完整版本号
     
     std::cout << "Detected input Spine version: " << getVersionString(inputVersion) << "\n";
     if (inputVersion != outputVersion) {
-        std::cout << "Converting to output Spine version: " << getVersionString(outputVersion) << "\n";
+        std::cout << "Converting to output Spine version: " << getVersionString(outputVersion);
+        if (!outputVersionString.empty()) {
+            std::cout << " (" << outputVersionString << ")";
+        }
+        std::cout << "\n";
     }
     std::cout << "Converting from " << (options.inputFormat == FileFormat::Json ? "JSON" : "SKEL") 
               << " to " << (options.outputFormat == FileFormat::Json ? "JSON" : "SKEL") << "...\n";
     
-    if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion)) {
+    if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString)) {
         std::cout << "Conversion completed successfully!\n";
         std::cout << "Output file: " << options.outputFile << "\n";
         return 0;

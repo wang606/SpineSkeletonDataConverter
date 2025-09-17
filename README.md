@@ -2,7 +2,8 @@
 
 > ⚠️ **Development Warning**  
 >
-> Version conversion functionality has not been thoroughly tested.
+> Version conversion functionality has not been thoroughly tested.  
+> Atlas format differs between 3.x and 4.x versions, so converting skeleton files alone is insufficient.
 
 A powerful command-line tool for converting Spine skeleton data between different formats and different versions, with automatic version detection and support for multiple Spine runtime versions.
 
