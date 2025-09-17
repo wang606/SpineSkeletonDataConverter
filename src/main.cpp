@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <regex>
 #include "common.h"
+#include "AtlasData.h"
 
 #include "SkeletonData.h"
 
@@ -20,6 +21,7 @@ enum class SpineVersion {
 enum class FileFormat {
     Json,
     Skel,
+    Atlas,
     Unknown
 };
 
@@ -70,6 +72,37 @@ SpineVersion detectSpineVersion(const std::string& filePath) {
     }
     
     return SpineVersion::Invalid;
+}
+
+bool convertAtlasFile(const std::string& inputFile, const std::string& outputFile) {
+    try {
+        // 读取输入atlas文件
+        std::ifstream ifs(inputFile);
+        if (!ifs) {
+            std::cerr << "Error: Cannot open input atlas file: " << inputFile << "\n";
+            return false;
+        }
+        
+        std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+        
+        // 转换为3.8格式
+        std::string convertedContent = convertAtlasDataTo38(content);
+        
+        // 写入输出文件
+        std::ofstream ofs(outputFile);
+        if (!ofs) {
+            std::cerr << "Error: Cannot create output atlas file: " << outputFile << "\n";
+            return false;
+        }
+        
+        ofs << convertedContent;
+        
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error during atlas conversion: " << e.what() << "\n";
+        return false;
+    }
 }
 
 std::string getVersionString(SpineVersion version) {
@@ -299,22 +332,24 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
 
 void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " <input_file> <output_file> [options]\n\n";
+    std::cout << "Supported file formats:\n";
+    std::cout << "  .json       Spine JSON format\n";
+    std::cout << "  .skel       Spine binary (SKEL) format\n";
+    std::cout << "  .atlas      Spine Atlas format\n\n";
     std::cout << "Options:\n";
-    std::cout << "  --in-json       Input file is in JSON format\n";
-    std::cout << "  --in-skel       Input file is in SKEL (binary) format\n";
-    std::cout << "  --out-json      Output file should be in JSON format\n";
-    std::cout << "  --out-skel      Output file should be in SKEL (binary) format\n";
     std::cout << "  --out-version   Output version (must be complete: x.y.z format)\n";
     std::cout << "  --help          Show this help message\n\n";
     std::cout << "Examples:\n";
-    std::cout << "  " << programName << " input.skel output.json --in-skel --out-json\n";
-    std::cout << "  " << programName << " input.json output.skel --in-json --out-skel\n";
-    std::cout << "  " << programName << " input37.json output42.skel --out-version 4.2.11\n\n";
+    std::cout << "  " << programName << " input.skel output.json\n";
+    std::cout << "  " << programName << " input.json output.skel\n";
+    std::cout << "  " << programName << " input37.json output42.skel --out-version 4.2.11\n";
+    std::cout << "  " << programName << " input.atlas output.atlas  (converts atlas to 3.8 format)\n\n";
     std::cout << "Supported Spine versions: 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x\n";
     std::cout << "Note: Version must be specified in complete x.y.z format (e.g., 4.2.11, not 4.2)\n";
     std::cout << "Input version detection is automatic based on file content.\n";
     std::cout << "Output version defaults to input version unless specified with --out-version.\n";
     std::cout << "When --out-version is specified, the SkeletonData.version field will be updated.\n";
+    std::cout << "Atlas conversion: When both input and output files have .atlas extension, converts to Spine 3.8 atlas format.\n";
 }
 
 ConversionOptions parseArguments(int argc, char* argv[]) {
@@ -328,17 +363,40 @@ ConversionOptions parseArguments(int argc, char* argv[]) {
     options.inputFile = argv[1];
     options.outputFile = argv[2];
     
+    // 自动检测文件格式
+    std::string inputExt = std::filesystem::path(options.inputFile).extension().string();
+    std::string outputExt = std::filesystem::path(options.outputFile).extension().string();
+    
+    if (inputExt == ".json") {
+        options.inputFormat = FileFormat::Json;
+    } else if (inputExt == ".skel") {
+        options.inputFormat = FileFormat::Skel;
+    } else if (inputExt == ".atlas") {
+        options.inputFormat = FileFormat::Atlas;
+    } else {
+        std::cerr << "Error: Unsupported input file extension: " << inputExt << "\n";
+        std::cerr << "Supported extensions: .json, .skel, .atlas\n";
+        options.help = true;
+        return options;
+    }
+    
+    if (outputExt == ".json") {
+        options.outputFormat = FileFormat::Json;
+    } else if (outputExt == ".skel") {
+        options.outputFormat = FileFormat::Skel;
+    } else if (outputExt == ".atlas") {
+        options.outputFormat = FileFormat::Atlas;
+    } else {
+        std::cerr << "Error: Unsupported output file extension: " << outputExt << "\n";
+        std::cerr << "Supported extensions: .json, .skel, .atlas\n";
+        options.help = true;
+        return options;
+    }
+    
+    // 解析其他参数
     for (int i = 3; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--in-json") {
-            options.inputFormat = FileFormat::Json;
-        } else if (arg == "--in-skel") {
-            options.inputFormat = FileFormat::Skel;
-        } else if (arg == "--out-json") {
-            options.outputFormat = FileFormat::Json;
-        } else if (arg == "--out-skel") {
-            options.outputFormat = FileFormat::Skel;
-        } else if (arg == "--out-version") {
+        if (arg == "--out-version") {
             if (i + 1 < argc) {
                 std::string versionStr = argv[++i];
                 options.outputVersionString = versionStr; // 保存完整版本号字符串
@@ -360,25 +418,6 @@ ConversionOptions parseArguments(int argc, char* argv[]) {
         }
     }
     
-    // Auto-detect formats if not specified
-    if (options.inputFormat == FileFormat::Unknown) {
-        std::string inputExt = std::filesystem::path(options.inputFile).extension().string();
-        if (inputExt == ".json") {
-            options.inputFormat = FileFormat::Json;
-        } else if (inputExt == ".skel") {
-            options.inputFormat = FileFormat::Skel;
-        }
-    }
-    
-    if (options.outputFormat == FileFormat::Unknown) {
-        std::string outputExt = std::filesystem::path(options.outputFile).extension().string();
-        if (outputExt == ".json") {
-            options.outputFormat = FileFormat::Json;
-        } else if (outputExt == ".skel") {
-            options.outputFormat = FileFormat::Skel;
-        }
-    }
-    
     return options;
 }
 
@@ -396,46 +435,60 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    // Validate formats are specified
-    if (options.inputFormat == FileFormat::Unknown) {
-        std::cerr << "Error: Could not determine input file format. Please specify --in-json or --in-skel\n";
-        return 1;
-    }
-    
-    if (options.outputFormat == FileFormat::Unknown) {
-        std::cerr << "Error: Could not determine output file format. Please specify --out-json or --out-skel\n";
-        return 1;
-    }
-    
-    // Detect input Spine version
-    SpineVersion inputVersion = detectSpineVersion(options.inputFile);
-    
-    if (inputVersion == SpineVersion::Invalid) {
-        std::cerr << "Error: Could not detect Spine version from input file\n";
-        return 1;
-    }
-    
-    // Use output version if specified, otherwise use input version
-    SpineVersion outputVersion = (options.outputVersion != SpineVersion::Invalid) ? options.outputVersion : inputVersion;
-    std::string outputVersionString = options.outputVersionString; // 使用用户指定的完整版本号
-    
-    std::cout << "Detected input Spine version: " << getVersionString(inputVersion) << "\n";
-    if (inputVersion != outputVersion) {
-        std::cout << "Converting to output Spine version: " << getVersionString(outputVersion);
-        if (!outputVersionString.empty()) {
-            std::cout << " (" << outputVersionString << ")";
+    // 检查是否是Atlas转换
+    if (options.inputFormat == FileFormat::Atlas && options.outputFormat == FileFormat::Atlas) {
+        std::cout << "Converting Atlas file to Spine 3.8 format...\n";
+        
+        if (convertAtlasFile(options.inputFile, options.outputFile)) {
+            std::cout << "Atlas conversion completed successfully!\n";
+            std::cout << "Output file: " << options.outputFile << "\n";
+            return 0;
+        } else {
+            std::cerr << "Atlas conversion failed!\n";
+            return 1;
         }
-        std::cout << "\n";
     }
-    std::cout << "Converting from " << (options.inputFormat == FileFormat::Json ? "JSON" : "SKEL") 
-              << " to " << (options.outputFormat == FileFormat::Json ? "JSON" : "SKEL") << "...\n";
     
-    if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString)) {
-        std::cout << "Conversion completed successfully!\n";
-        std::cout << "Output file: " << options.outputFile << "\n";
-        return 0;
+    // 检查是否是skeleton文件转换
+    if ((options.inputFormat == FileFormat::Json || options.inputFormat == FileFormat::Skel) &&
+        (options.outputFormat == FileFormat::Json || options.outputFormat == FileFormat::Skel)) {
+        
+        // Detect input Spine version
+        SpineVersion inputVersion = detectSpineVersion(options.inputFile);
+        
+        if (inputVersion == SpineVersion::Invalid) {
+            std::cerr << "Error: Could not detect Spine version from input file\n";
+            return 1;
+        }
+        
+        // Use output version if specified, otherwise use input version
+        SpineVersion outputVersion = (options.outputVersion != SpineVersion::Invalid) ? options.outputVersion : inputVersion;
+        std::string outputVersionString = options.outputVersionString; // 使用用户指定的完整版本号
+        
+        std::cout << "Detected input Spine version: " << getVersionString(inputVersion) << "\n";
+        if (inputVersion != outputVersion) {
+            std::cout << "Converting to output Spine version: " << getVersionString(outputVersion);
+            if (!outputVersionString.empty()) {
+                std::cout << " (" << outputVersionString << ")";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "Converting from " << (options.inputFormat == FileFormat::Json ? "JSON" : "SKEL") 
+                  << " to " << (options.outputFormat == FileFormat::Json ? "JSON" : "SKEL") << "...\n";
+        
+        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString)) {
+            std::cout << "Conversion completed successfully!\n";
+            std::cout << "Output file: " << options.outputFile << "\n";
+            return 0;
+        } else {
+            std::cerr << "Conversion failed!\n";
+            return 1;
+        }
     } else {
-        std::cerr << "Conversion failed!\n";
+        std::cerr << "Error: Invalid file format combination\n";
+        std::cerr << "Supported conversions:\n";
+        std::cerr << "  - .json <-> .skel (skeleton data conversion)\n";
+        std::cerr << "  - .atlas -> .atlas (atlas conversion to 3.8 format)\n";
         return 1;
     }
 }

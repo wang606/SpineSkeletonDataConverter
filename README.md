@@ -3,7 +3,6 @@
 > ⚠️ **Development Warning**  
 >
 > Version conversion functionality has not been thoroughly tested.  
-> Atlas format differs between 3.x and 4.x versions, so converting skeleton files alone is insufficient.
 
 A powerful command-line tool for converting Spine skeleton data between different formats and different versions, with automatic version detection and support for multiple Spine runtime versions.
 
@@ -11,10 +10,14 @@ A powerful command-line tool for converting Spine skeleton data between differen
 
 - **Automatic Version Detection**: Intelligently detects Spine version from `.skel` or `.json` files
 - **Multi-Version Support**: Compatible with Spine versions 3.7, 3.8, 4.0, 4.1, and 4.2
+- **Atlas Format Conversion**: Convert Atlas files to Spine 3.8 compatible format
+- **Smart Format Detection**: Automatically detects file formats based on file extensions
 - **Cross-Platform**: Built with C++20 and CMake for maximum portability
 - **Comprehensive Testing**: Includes test suites for all supported versions
 
 ## 📋 Format Support Matrix
+
+### Skeleton Data Formats
 
 |           | 3.7 | 3.8 | 4.0 | 4.1 | 4.2 |
 | --------- | --- | --- | --- | --- | --- |
@@ -22,6 +25,15 @@ A powerful command-line tool for converting Spine skeleton data between differen
 | JSON Writer | ✅ | ✅ | ✅ | ✅ | ✅  |
 | Binary Reader | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Binary Writer | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### Atlas Format Support
+
+| Feature | Support |
+| ------- | ------- |
+| Atlas to 3.8 Conversion | ✅ |
+| Multi-page Atlas | ✅ |
+| Region Properties | ✅ |
+| Custom Attributes | ✅ |
 
 **Legend**: ✅ Supported | 🚧 In Development | ❌ Not Supported
 
@@ -45,28 +57,37 @@ cmake --build . --config Release
 ### Usage
 
 ```bash
-# Basic format conversion (same version)
-./build/Release/SpineSkeletonDataConverter.exe input.skel output.json --in-skel --out-json
+# Basic skeleton format conversion (same version)
+./build/Release/SpineSkeletonDataConverter.exe input.skel output.json
 
 # The tool auto-detects file formats from extensions
 ./build/Release/SpineSkeletonDataConverter.exe input.json output.skel
 
 # Cross-version conversion (convert 3.7 file to 4.2 format)
-./build/Release/SpineSkeletonDataConverter.exe input37.json output42.json --out-version 4.2
+./build/Release/SpineSkeletonDataConverter.exe input37.json output42.json --out-version 4.2.11
 
 # Convert new binary format to old version
-./build/Release/SpineSkeletonDataConverter.exe new.skel old.json --out-version 3.8
+./build/Release/SpineSkeletonDataConverter.exe new.skel old.json --out-version 3.8.99
+
+# Atlas format conversion to Spine 3.8 compatible format
+./build/Release/SpineSkeletonDataConverter.exe input.atlas output.atlas
+
+# Supported file formats:
+#   .json       Spine JSON skeleton format
+#   .skel       Spine binary (SKEL) skeleton format  
+#   .atlas      Spine Atlas texture format
 
 # Available options:
-#   --in-json       Input file is in JSON format
-#   --in-skel       Input file is in SKEL (binary) format  
-#   --out-json      Output file should be in JSON format
-#   --out-skel      Output file should be in SKEL (binary) format
-#   --out-version   Output version (3.7, 3.8, 4.0, 4.1, 4.2)
+#   --out-version   Output version (must be complete: x.y.z format, e.g., 3.7.94, 4.2.11)
 #   --help          Show help message
 
-# Input version detection is automatic based on file content
+# Conversion types:
+#   - .json <-> .skel: Skeleton data conversion between JSON and binary formats
+#   - .atlas -> .atlas: Atlas conversion to Spine 3.8 compatible format
+
+# Input version detection is automatic based on file content (for skeleton files)
 # Output version defaults to input version unless specified with --out-version
+# Atlas conversion always outputs Spine 3.8 compatible format
 ```
 
 ## 🧪 Testing
