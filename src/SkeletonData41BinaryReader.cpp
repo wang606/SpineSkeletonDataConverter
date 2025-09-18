@@ -233,7 +233,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                     readFloatArray(input, vertexCount << 1, mesh.uvs);
                     readShortArray(input, mesh.triangles);
                     readVertices(input, mesh.vertices, vertexCount);
-                    mesh.hullLength = readVarint(input, true) << 1;
+                    mesh.hullLength = readVarint(input, true);
                     mesh.sequence = readSequence(input);
                     if (skeletonData->nonessential) {
                         readShortArray(input, mesh.edges);

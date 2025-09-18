@@ -281,7 +281,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     writeFloatArray(binary, mesh.uvs);
                     writeShortArray(binary, mesh.triangles);
                     writeVertices(binary, mesh.vertices, mesh.vertices.size() > vertexCount * 2);
-                    writeVarint(binary, mesh.hullLength >> 1, true);
+                    writeVarint(binary, mesh.hullLength, true);
                     writeSequence(binary, mesh.sequence);
                     if (skeletonData.nonessential) {
                         writeShortArray(binary, mesh.edges);
