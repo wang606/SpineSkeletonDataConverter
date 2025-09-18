@@ -407,3 +407,6 @@ namespace spine42 {
     SkeletonData readJsonData(const Json&);
     Json writeJsonData(const SkeletonData&);
 }
+
+void convertSkeletonData3xTo4x(SkeletonData& data);
+void convertSkeletonData4xTo3x(SkeletonData& data); 

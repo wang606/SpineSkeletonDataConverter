@@ -284,6 +284,9 @@ std::string convertAtlasDataTo38(const std::string& content) {
             // index (必需) - 使用region自身的index属性
             output << "  index: " << region.index << "\n";
         }
+
+        // 页面之间有空行
+        output << "\n"; 
     }
     
     return output.str();

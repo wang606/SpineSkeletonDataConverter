@@ -25,6 +25,7 @@ add_executable(SpineSkeletonDataConverter
     "src/main.cpp"
     "src/common.cpp"
     "src/AtlasDataConverter38.cpp"
+    "src/SkeletonDataConverter.cpp"
     "src/SkeletonData37BinaryReader.cpp"
     "src/SkeletonData37BinaryWriter.cpp"
     "src/SkeletonData37JsonReader.cpp"

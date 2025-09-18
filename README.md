@@ -31,9 +31,6 @@ A powerful command-line tool for converting Spine skeleton data between differen
 | Feature | Support |
 | ------- | ------- |
 | Atlas to 3.8 Conversion | ✅ |
-| Multi-page Atlas | ✅ |
-| Region Properties | ✅ |
-| Custom Attributes | ✅ |
 
 **Legend**: ✅ Supported | 🚧 In Development | ❌ Not Supported
 

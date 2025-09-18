@@ -5,8 +5,8 @@
 #include <filesystem>
 #include <regex>
 #include "common.h"
-#include "AtlasData.h"
 
+#include "AtlasData.h"
 #include "SkeletonData.h"
 
 enum class SpineVersion {
@@ -34,6 +34,14 @@ struct ConversionOptions {
     std::string outputVersionString; // 完整的版本号字符串，如 "4.2.11"
     bool help = false;
 };
+
+bool is3xVersion(SpineVersion version) {
+    return version == SpineVersion::Version37 || version == SpineVersion::Version38;
+}
+
+bool is4xVersion(SpineVersion version) {
+    return version == SpineVersion::Version40 || version == SpineVersion::Version41 || version == SpineVersion::Version42;
+}
 
 SpineVersion detectSpineVersion(const std::string& filePath) {
     try {
@@ -213,6 +221,22 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         // 如果指定了输出版本字符串，则设置版本号
         if (!outputVersionString.empty()) {
             skelData.version = outputVersionString;
+        }
+        
+        // 跨版本转换处理
+        if (inputVersion != outputVersion) {
+            bool inputIs3x = is3xVersion(inputVersion);
+            bool inputIs4x = is4xVersion(inputVersion);
+            bool outputIs3x = is3xVersion(outputVersion);
+            bool outputIs4x = is4xVersion(outputVersion);
+            
+            if (inputIs3x && outputIs4x) {
+                std::cout << "Performing 3.x to 4.x conversion...\n";
+                convertSkeletonData3xTo4x(skelData);
+            } else if (inputIs4x && outputIs3x) {
+                std::cout << "Performing 4.x to 3.x conversion...\n";
+                convertSkeletonData4xTo3x(skelData);
+            }
         }
         
         // Write data using output version
