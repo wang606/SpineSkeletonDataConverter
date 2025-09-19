@@ -25,24 +25,6 @@ class SpineConverter:
         if not os.path.exists(exe_path):
             raise FileNotFoundError(f"SpineSkeletonDataConverter.exe not found at: {exe_path}")
     
-    def get_format_from_extension(self, ext: str) -> str:
-        """
-        根据文件扩展名确定格式
-        
-        Args:
-            ext: 文件扩展名
-            
-        Returns:
-            格式字符串 ('json' 或 'skel')
-        """
-        ext = ext.lower()
-        if ext == '.json':
-            return 'json'
-        elif ext == '.skel':
-            return 'skel'
-        else:
-            raise ValueError(f"Unsupported file extension: {ext}")
-    
     def parse_conversion_chain(self, output_suffix: str) -> List[str]:
         """
         解析转换链
@@ -68,14 +50,12 @@ class SpineConverter:
         
         return formats
     
-    def convert_file(self, input_file: str, input_format: str, output_format: str, output_file: str) -> bool:
+    def convert_file(self, input_file: str, output_file: str) -> bool:
         """
         转换单个文件
         
         Args:
             input_file: 输入文件路径
-            input_format: 输入格式 ('json' 或 'skel')
-            output_format: 输出格式 ('json' 或 'skel')
             output_file: 输出文件路径
             
         Returns:
@@ -85,9 +65,7 @@ class SpineConverter:
             cmd = [
                 self.exe_path,
                 input_file,
-                output_file,
-                f'--in-{input_format}',
-                f'--out-{output_format}'
+                output_file
             ]
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -105,13 +83,12 @@ class SpineConverter:
             print(f"Exception converting {input_file}: {e}")
             return False
     
-    def convert_with_chain(self, input_file: str, input_format: str, conversion_chain: List[str], input_suffix: str, output_suffix: str) -> bool:
+    def convert_with_chain(self, input_file: str, conversion_chain: List[str], input_suffix: str, output_suffix: str) -> bool:
         """
         按转换链进行多步转换
         
         Args:
             input_file: 输入文件路径
-            input_format: 输入格式
             conversion_chain: 转换链
             input_suffix: 输入文件后缀
             output_suffix: 输出后缀
@@ -125,7 +102,6 @@ class SpineConverter:
         # 创建临时目录用于中间文件
         with tempfile.TemporaryDirectory() as temp_dir:
             current_file = input_file
-            current_format = input_format
             
             for i, target_format in enumerate(conversion_chain):
                 # 确定输出文件
@@ -138,12 +114,11 @@ class SpineConverter:
                     output_file = os.path.join(temp_dir, temp_name)
                 
                 # 执行转换
-                if not self.convert_file(current_file, current_format, target_format, output_file):
+                if not self.convert_file(current_file, output_file):
                     return False
                 
-                # 更新当前文件和格式
+                # 更新当前文件
                 current_file = output_file
-                current_format = target_format
         
         return True
     
@@ -249,9 +224,6 @@ def main():
         conversion_chain = converter.parse_conversion_chain(args.conversion_path)
         print(f"转换链: {' -> '.join(conversion_chain)}")
         
-        # 确定输入格式
-        input_format = converter.get_format_from_extension(args.input_suffix)
-        
         # 查找文件
         files = find_files_with_suffix(args.directory, args.input_suffix)
         
@@ -275,7 +247,7 @@ def main():
         for i, file in enumerate(files, 1):
             print(f"[{i}/{total_count}] 处理: {file}")
             
-            if converter.convert_with_chain(file, input_format, conversion_chain, args.input_suffix, args.conversion_path):
+            if converter.convert_with_chain(file, conversion_chain, args.input_suffix, args.conversion_path):
                 success_count += 1
                 output_file = converter.get_final_output_path(file, args.input_suffix, args.conversion_path)
                 print(f"  -> 成功: {output_file}")
