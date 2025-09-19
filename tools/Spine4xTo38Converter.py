@@ -34,7 +34,7 @@ def convert_skeleton_data(input_file: str, output_file: str, converter_path: str
             converter_path,
             input_file,
             output_file,
-            '--out-version', '3.8.75'
+            '-v', '3.8.75'
         ]
         
         print(f"Converting skeleton: {os.path.basename(input_file)}")
@@ -55,7 +55,7 @@ def convert_skeleton_data(input_file: str, output_file: str, converter_path: str
 
 
 # ============================================================================
-# Task 2: Atlas Format Conversion (4.x -> 3.8) - 基于C++版本逻辑
+# Task 2: Atlas Format Conversion (4.x -> 3.8)
 # ============================================================================
 
 # Atlas数据结构类
@@ -212,7 +212,6 @@ def read_atlas_data_4x(content: str) -> AtlasData:
             elif key == "pad" and len(values) >= 4:
                 region.pads = [int(val) for val in values]
             else:
-                # 其他自定义属性 - 按照C++版本的逻辑
                 region.names.append(key)
                 for val in values:
                     region.values.append(int(val))

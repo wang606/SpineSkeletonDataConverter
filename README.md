@@ -1,9 +1,5 @@
 # Spine Skeleton Data Converter
 
-> ⚠️ **Development Warning**  
->
-> Version conversion functionality has not been thoroughly tested.  
-
 A powerful command-line tool for converting Spine skeleton data between different formats and different versions, with automatic version detection and support for multiple Spine runtime versions.
 
 ## ✨ Features

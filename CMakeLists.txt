@@ -6,19 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add spine-cpp for syntax prompting. These won't be linked to the final executable.
 
-macro(add_spine_cpp version)
-    file(GLOB SPINE_CPP
-        "spine/spine-cpp-${version}/include/spine/*.h"
-        "spine/spine-cpp-${version}/src/spine/*.cpp")
-    add_library(spine_cpp_${version} ${SPINE_CPP})
-    target_include_directories(spine_cpp_${version} PRIVATE "spine/spine-cpp-${version}/include")
-endmacro()
+# macro(add_spine_cpp version)
+#     file(GLOB SPINE_CPP
+#         "spine/spine-cpp-${version}/include/spine/*.h"
+#         "spine/spine-cpp-${version}/src/spine/*.cpp")
+#     add_library(spine_cpp_${version} ${SPINE_CPP})
+#     target_include_directories(spine_cpp_${version} PRIVATE "spine/spine-cpp-${version}/include")
+# endmacro()
 
-add_spine_cpp(37)
-add_spine_cpp(38)
-add_spine_cpp(40)
-add_spine_cpp(41)
-add_spine_cpp(42)
+# add_spine_cpp(37)
+# add_spine_cpp(38)
+# add_spine_cpp(40)
+# add_spine_cpp(41)
+# add_spine_cpp(42)
 
 add_executable(SpineSkeletonDataConverter
     "include/json.hpp"
