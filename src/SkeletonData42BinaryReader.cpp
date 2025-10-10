@@ -463,8 +463,34 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
                     break; 
                 }
                 case SlotTimelineType::SLOT_ALPHA: {
+                    Timeline timeline;
                     int bezierCount = readVarint(input, true);
-                    slotTimeline["alpha"] = readTimeline(input, frameCount, 1);
+                    float time = readFloat(input);
+                    float alpha = readByte(input) / 255.0f; 
+                    for (int frameIndex = 0; ; frameIndex++) {
+                        TimelineFrame frame; 
+                        frame.time = time; 
+                        frame.value1 = alpha; 
+                        if (frameIndex == frameCount - 1) {
+                            timeline.push_back(frame);
+                            break;
+                        }
+                        time = readFloat(input);
+                        alpha = readByte(input) / 255.0f; 
+                        switch (readSByte(input)) {
+                            case CURVE_STEPPED: {
+                                frame.curveType = CurveType::CURVE_STEPPED;
+                                break; 
+                            }
+                            case CURVE_BEZIER: {
+                                frame.curveType = CurveType::CURVE_BEZIER;
+                                readCurve(input, frame, 1);
+                                break; 
+                            }
+                        }
+                        timeline.push_back(frame);
+                    }
+                    slotTimeline["alpha"] = timeline;
                     break;
                 }
             }
