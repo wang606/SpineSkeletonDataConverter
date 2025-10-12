@@ -282,7 +282,7 @@ struct IKConstraintData {
     bool compress = false; 
     bool stretch = false; 
     bool uniform = false; 
-    float mix = 1.0f; 
+    float mix = 0.0f; 
     float softness = 0.0f; 
 };
 
@@ -292,7 +292,7 @@ struct TransformConstraintData {
     bool skinRequired = false;
     std::vector<std::string> bones; 
     OptStr target = std::nullopt;
-    float mixRotate = 1.0f, mixX = 1.0f, mixY = 1.0f, mixScaleX = 1.0f, mixScaleY = 1.0f, mixShearY = 1.0f; 
+    float mixRotate = 0.0f, mixX = 0.0f, mixY = 0.0f, mixScaleX = 0.0f, mixScaleY = 0.0f, mixShearY = 0.0f; 
     float offsetRotation = 0.0f, offsetX = 0.0f, offsetY = 0.0f, offsetScaleX = 0.0f, offsetScaleY = 0.0f, offsetShearY = 0.0f;
     bool relative = false, local = false; 
 };
@@ -308,7 +308,7 @@ struct PathConstraintData {
     RotateMode rotateMode = RotateMode::RotateMode_Tangent;
     float offsetRotation = 0.0f;
     float position = 0.0f, spacing = 0.0f;
-    float mixRotate = 1.0f, mixX = 1.0f, mixY = 1.0f;
+    float mixRotate = 0.0f, mixX = 0.0f, mixY = 0.0f;
 };
 
 struct PhysicsConstraintData {
@@ -316,8 +316,8 @@ struct PhysicsConstraintData {
     size_t order = 0;
     bool skinRequired = false;
     OptStr bone = std::nullopt;
-    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 0.0f, shearX = 0.0f, limit = 5000.0f;
-    float fps = 60.0f, inertia = 1.0f, strength = 100.0f, damping = 1.0f, mass = 1.0f, wind = 0.0f, gravity = 0.0f, mix = 1.0f;
+    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 0.0f, shearX = 0.0f, limit = 0.0f;
+    float fps = 0.0f, inertia = 0.0f, strength = 0.0f, damping = 0.0f, mass = 0.0f, wind = 0.0f, gravity = 0.0f, mix = 0.0f;
     bool inertiaGlobal = false, strengthGlobal = false, dampingGlobal = false, massGlobal = false, windGlobal = false, gravityGlobal = false, mixGlobal = false;
 };
 

@@ -946,9 +946,9 @@ SkeletonData readBinaryData(const Binary& binary) {
         if ((flags & 1) != 0) transformData.offsetShearY = readFloat(&input);
         if ((flags & 2) != 0) transformData.mixRotate = readFloat(&input);
         if ((flags & 4) != 0) transformData.mixX = readFloat(&input);
-        transformData.mixY = (flags & 8) != 0 ? readFloat(&input) : transformData.mixX;
+        if ((flags & 8) != 0) transformData.mixY = readFloat(&input);
         if ((flags & 16) != 0) transformData.mixScaleX = readFloat(&input);
-        transformData.mixScaleY = (flags & 32) != 0 ? readFloat(&input) : transformData.mixScaleX;
+        if ((flags & 32) != 0) transformData.mixScaleY = readFloat(&input);
         if ((flags & 64) != 0) transformData.mixShearY = readFloat(&input);
         skeletonData.transformConstraints.push_back(transformData);
     }
@@ -991,12 +991,12 @@ SkeletonData readBinaryData(const Binary& binary) {
         if ((flags & 8) != 0) physicsData.rotate = readFloat(&input);
         if ((flags & 16) != 0) physicsData.scaleX = readFloat(&input);
         if ((flags & 32) != 0) physicsData.shearX = readFloat(&input);
-        if ((flags & 64) != 0) physicsData.limit = readFloat(&input);
+        physicsData.limit = (flags & 64) != 0 ? readFloat(&input) : 5000.0f;
         physicsData.fps = (float) readByte(&input); 
         physicsData.inertia = readFloat(&input);
         physicsData.strength = readFloat(&input);
         physicsData.damping = readFloat(&input);
-        if ((flags & 128) != 0) physicsData.mass = 1.0f / readFloat(&input);
+        physicsData.mass = (flags & 128) != 0 ? 1.0f / readFloat(&input) : 1.0f;
         physicsData.wind = readFloat(&input);
         physicsData.gravity = readFloat(&input);
         flags = readByte(&input);
@@ -1007,7 +1007,7 @@ SkeletonData readBinaryData(const Binary& binary) {
         physicsData.windGlobal = (flags & 16) != 0;
         physicsData.gravityGlobal = (flags & 32) != 0;
         physicsData.mixGlobal = (flags & 64) != 0;
-        if ((flags & 128) != 0) physicsData.mix = readFloat(&input);
+        physicsData.mix = (flags & 128) != 0 ? readFloat(&input) : 1.0f;
         skeletonData.physicsConstraints.push_back(physicsData);
     }
 

@@ -927,9 +927,9 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
         if (ik.compress) flags |= 4;
         if (ik.stretch) flags |= 8;
         if (ik.uniform) flags |= 16;
-        if (ik.mix != 1.0f) {
+        if (ik.mix != 0.0f) {
             flags |= 32;
-            flags |= 64;
+            if (ik.mix != 1.0f) flags |= 64;
         }
         if (ik.softness != 0.0f) flags |= 128;
         writeByte(binary, flags);
@@ -977,13 +977,13 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
         if ((flags & 64) != 0) writeFloat(binary, transform.offsetScaleX);
         if ((flags & 128) != 0) writeFloat(binary, transform.offsetScaleY);
         flags = 0; 
-        if (transform.offsetShearY != 1.0f) flags |= 1;
-        if (transform.mixRotate != 1.0f) flags |= 2;
-        if (transform.mixX != 1.0f) flags |= 4;
-        if (transform.mixY != transform.mixX) flags |= 8;
-        if (transform.mixScaleX != 1.0f) flags |= 16;
-        if (transform.mixScaleY != transform.mixScaleX) flags |= 32;
-        if (transform.mixShearY != 1.0f) flags |= 64;
+        if (transform.offsetShearY != 0.0f) flags |= 1;
+        if (transform.mixRotate != 0.0f) flags |= 2;
+        if (transform.mixX != 0.0f) flags |= 4;
+        if (transform.mixY != 0.0f) flags |= 8;
+        if (transform.mixScaleX != 0.0f) flags |= 16;
+        if (transform.mixScaleY != 0.0f) flags |= 32;
+        if (transform.mixShearY != 0.0f) flags |= 64;
         writeByte(binary, flags);
         if ((flags & 1) != 0) writeFloat(binary, transform.offsetShearY);
         if ((flags & 2) != 0) writeFloat(binary, transform.mixRotate);

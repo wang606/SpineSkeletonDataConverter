@@ -42,14 +42,8 @@ void dumpJsonToOss(const Json& j, std::ostringstream& oss) {
         oss << "}";
     } else if (j.is_number_float()) {
         oss << formatNumber(j.get<double>());
-    } else if (j.is_number_integer() || j.is_number_unsigned()) {
-        oss << j.get<long long>();
-    } else if (j.is_string()) {
-        oss << "\"" << j.get<std::string>() << "\"";
-    } else if (j.is_boolean()) {
-        oss << (j.get<bool>() ? "true" : "false");
-    } else if (j.is_null()) {
-        oss << "null";
+    } else {
+        oss << j.dump(); 
     }
 }
 
