@@ -408,5 +408,5 @@ namespace spine42 {
     Json writeJsonData(const SkeletonData&);
 }
 
-void convertSkeletonData3xTo4x(SkeletonData& data);
-void convertSkeletonData4xTo3x(SkeletonData& data); 
+void convertCurve3xTo4x(SkeletonData& skeleton);
+void convertCurve4xTo3x(SkeletonData& skeleton);

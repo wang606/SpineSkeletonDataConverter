@@ -199,10 +199,10 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
             
             if (inputIs3x && outputIs4x) {
                 std::cout << "Performing 3.x to 4.x conversion...\n";
-                convertSkeletonData3xTo4x(skelData);
+                convertCurve3xTo4x(skelData);
             } else if (inputIs4x && outputIs3x) {
                 std::cout << "Performing 4.x to 3.x conversion...\n";
-                convertSkeletonData4xTo3x(skelData);
+                convertCurve4xTo3x(skelData);
             }
         }
         
