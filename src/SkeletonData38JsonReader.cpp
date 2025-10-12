@@ -132,7 +132,7 @@ SkeletonData readJsonData(const Json& j) {
             if (slotJson.contains("bone")) slotData.bone = slotJson["bone"];
             if (slotJson.contains("color")) slotData.color = stringToColor(slotJson["color"], true);
             if (slotJson.contains("dark")) slotData.darkColor = stringToColor(slotJson["dark"], false);
-            if (slotJson.contains("attachment")) slotData.attachmentName = slotJson["attachment"];
+            if (slotJson.contains("attachment") && !slotJson["attachment"].is_null()) slotData.attachmentName = slotJson["attachment"];
             slotData.blendMode = blendModeMap.at(slotJson.value("blend", "normal"));
             skeletonData.slots.push_back(slotData);
         }

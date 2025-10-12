@@ -657,6 +657,7 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
         strings.insert(event.name);
     }
     writeVarint(binary, strings.size(), true);
+    skeletonData.strings.clear();
     for (const std::string& str : strings) {
         skeletonData.strings.push_back(str);
         writeString(binary, str);
