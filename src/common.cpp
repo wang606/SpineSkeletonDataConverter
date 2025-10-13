@@ -35,7 +35,7 @@ void dumpJsonToOss(const Json& j, std::ostringstream& oss) {
         bool first = true;
         for (auto it = j.begin(); it != j.end(); ++it) {
             if (!first) oss << ",";
-            oss << "\"" << it.key() << "\":";
+            oss << Json(it.key()).dump() << ":";
             dumpJsonToOss(it.value(), oss);
             first = false;
         }

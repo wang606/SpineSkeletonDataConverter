@@ -304,7 +304,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                 case AttachmentType_Path: {
                     const PathAttachment& path = std::get<PathAttachment>(attachment.data);
                     if (path.closed) flags |= 16;
-                    if (!path.constantSpeed) flags |= 32;
+                    if (path.constantSpeed) flags |= 32;
                     if (path.vertices.size() > path.vertexCount * 2) flags |= 64;
                     break; 
                 }

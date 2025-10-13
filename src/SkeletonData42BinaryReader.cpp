@@ -264,7 +264,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                     PathAttachment path; 
                     attachment.path = attachment.name; 
                     path.closed = (flags & 16) != 0;
-                    path.constantSpeed = (flags & 32) == 0;
+                    path.constantSpeed = (flags & 32) != 0;
                     int vertexCount = readVertices(input, path.vertices, (flags & 64) != 0);
                     path.vertexCount = vertexCount;
                     readFloatArray(input, vertexCount / 3, path.lengths);
