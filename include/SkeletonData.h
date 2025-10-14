@@ -1,9 +1,11 @@
+#ifndef SKELETONDATA_H
+#define SKELETONDATA_H
+
 #include <map>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
-#include "common.h"
 #include "json.hpp"
 using Json = nlohmann::ordered_json;
 
@@ -119,6 +121,165 @@ enum CurveType {
     CURVE_LINEAR = 0,
     CURVE_STEPPED = 1,
     CURVE_BEZIER = 2
+};
+
+/* constants */
+
+// json reader
+
+static const std::map<std::string, Inherit> inheritMap = {
+    {"normal", Inherit_Normal},
+    {"onlyTranslation", Inherit_OnlyTranslation},
+    {"noRotationOrReflection", Inherit_NoRotationOrReflection},
+    {"noScale", Inherit_NoScale},
+    {"noScaleOrReflection", Inherit_NoScaleOrReflection}
+};
+
+static const std::map<std::string, BlendMode> blendModeMap = {
+    {"normal", BlendMode_Normal},
+    {"additive", BlendMode_Additive},
+    {"multiply", BlendMode_Multiply},
+    {"screen", BlendMode_Screen}
+};
+
+static const std::map<std::string, PositionMode> positionModeMap = {
+    {"fixed", PositionMode_Fixed},
+    {"percent", PositionMode_Percent}
+};
+
+static const std::map<std::string, SpacingMode> spacingModeMap = {
+    {"length", SpacingMode_Length},
+    {"fixed", SpacingMode_Fixed},
+    {"percent", SpacingMode_Percent},
+    {"proportional", SpacingMode_Proportional}
+};
+
+static const std::map<std::string, RotateMode> rotateModeMap = {
+    {"tangent", RotateMode_Tangent},
+    {"chain", RotateMode_Chain},
+    {"chainScale", RotateMode_ChainScale}
+};
+
+static const std::map<std::string, AttachmentType> attachmentTypeMap = {
+    {"region", AttachmentType_Region},
+    {"boundingbox", AttachmentType_Boundingbox},
+    {"mesh", AttachmentType_Mesh},
+    {"linkedmesh", AttachmentType_Linkedmesh},
+    {"path", AttachmentType_Path},
+    {"point", AttachmentType_Point},
+    {"clipping", AttachmentType_Clipping}
+};
+
+static const std::map<std::string, SequenceMode> sequenceModeMap = {
+    {"hold", SequenceMode::hold},
+    {"once", SequenceMode::once},
+    {"loop", SequenceMode::loop},
+    {"pingpong", SequenceMode::pingpong},
+    {"onceReverse", SequenceMode::onceReverse},
+    {"loopReverse", SequenceMode::loopReverse},
+    {"pingpongReverse", SequenceMode::pingpongReverse}
+};
+
+// json writer
+
+static const std::map<Inherit, std::string> inheritString = {
+    { Inherit_Normal, "normal" },
+    { Inherit_OnlyTranslation, "onlyTranslation" },
+    { Inherit_NoRotationOrReflection, "noRotationOrReflection" },
+    { Inherit_NoScale, "noScale" },
+    { Inherit_NoScaleOrReflection, "noScaleOrReflection" }
+};
+
+static const std::map<BlendMode, std::string> blendModeString = {
+    { BlendMode_Normal, "normal" },
+    { BlendMode_Additive, "additive" },
+    { BlendMode_Multiply, "multiply" },
+    { BlendMode_Screen, "screen" }
+};
+
+static const std::map<PositionMode, std::string> positionModeString = {
+    { PositionMode_Fixed, "fixed" },
+    { PositionMode_Percent, "percent" }
+};
+
+static const std::map<SpacingMode, std::string> spacingModeString = {
+    { SpacingMode_Length, "length" },
+    { SpacingMode_Fixed, "fixed" },
+    { SpacingMode_Percent, "percent" },
+    { SpacingMode_Proportional, "proportional" }
+};
+
+static const std::map<RotateMode, std::string> rotateModeString = {
+    { RotateMode_Tangent, "tangent" },
+    { RotateMode_Chain, "chain" },
+    { RotateMode_ChainScale, "chainScale" }
+};
+
+static const std::map<AttachmentType, std::string> attachmentTypeString = {
+    { AttachmentType_Region, "region" },
+    { AttachmentType_Boundingbox, "boundingbox" },
+    { AttachmentType_Mesh, "mesh" },
+    { AttachmentType_Linkedmesh, "linkedmesh" },
+    { AttachmentType_Path, "path" },
+    { AttachmentType_Point, "point" },
+    { AttachmentType_Clipping, "clipping" }
+};
+
+static const std::map<SequenceMode, std::string> sequenceModeString = {
+    { SequenceMode::hold, "hold" },
+    { SequenceMode::once, "once" },
+    { SequenceMode::loop, "loop" },
+    { SequenceMode::pingpong, "pingpong" },
+    { SequenceMode::onceReverse, "onceReverse" },
+    { SequenceMode::loopReverse, "loopReverse" },
+    { SequenceMode::pingpongReverse, "pingpongReverse" }
+};
+
+// binary writer
+
+static const std::map<std::string, SlotTimelineType> slotTimelineTypeMap = {
+    {"attachment", SLOT_ATTACHMENT}, 
+    {"rgba", SLOT_RGBA}, 
+    {"rgb", SLOT_RGB}, 
+    {"rgba2", SLOT_RGBA2}, 
+    {"rgb2", SLOT_RGB2}, 
+    {"alpha", SLOT_ALPHA}
+};
+
+static const std::map<std::string, BoneTimelineType> boneTimelineTypeMap = {
+    {"rotate", BONE_ROTATE}, 
+    {"translate", BONE_TRANSLATE}, 
+    {"translatex", BONE_TRANSLATEX}, 
+    {"translatey", BONE_TRANSLATEY}, 
+    {"scale", BONE_SCALE}, 
+    {"scalex", BONE_SCALEX}, 
+    {"scaley", BONE_SCALEY}, 
+    {"shear", BONE_SHEAR}, 
+    {"shearx", BONE_SHEARX}, 
+    {"sheary", BONE_SHEARY}, 
+    {"inherit", BONE_INHERIT}
+};
+
+static const std::map<std::string, PathTimelineType> pathTimelineTypeMap = {
+    {"position", PATH_POSITION}, 
+    {"spacing", PATH_SPACING}, 
+    {"mix", PATH_MIX}
+};
+
+static const std::map<std::string, PhysicsTimelineType> physicsTimelineTypeMap = {
+    {"inertia", PHYSICS_INERTIA}, 
+    {"strength", PHYSICS_STRENGTH}, 
+    {"damping", PHYSICS_DAMPING}, 
+    {"mass", PHYSICS_MASS}, 
+    {"wind", PHYSICS_WIND}, 
+    {"gravity", PHYSICS_GRAVITY}, 
+    {"mix", PHYSICS_MIX}, 
+    {"reset", PHYSICS_RESET}
+};
+
+static const std::map<std::string, AttachmentTimelineType> attachmentTimelineTypeMap = {
+    {"deform", ATTACHMENT_DEFORM}, 
+    {"sequence", ATTACHMENT_SEQUENCE}
 };
 
 /* structs */
@@ -282,7 +443,7 @@ struct IKConstraintData {
     bool compress = false; 
     bool stretch = false; 
     bool uniform = false; 
-    float mix = 0.0f; 
+    float mix = 1.0f; 
     float softness = 0.0f; 
 };
 
@@ -292,7 +453,7 @@ struct TransformConstraintData {
     bool skinRequired = false;
     std::vector<std::string> bones; 
     OptStr target = std::nullopt;
-    float mixRotate = 0.0f, mixX = 0.0f, mixY = 0.0f, mixScaleX = 0.0f, mixScaleY = 0.0f, mixShearY = 0.0f; 
+    float mixRotate = 1.0f, mixX = 1.0f, mixY = 1.0f, mixScaleX = 1.0f, mixScaleY = 1.0f, mixShearY = 1.0f; 
     float offsetRotation = 0.0f, offsetX = 0.0f, offsetY = 0.0f, offsetScaleX = 0.0f, offsetScaleY = 0.0f, offsetShearY = 0.0f;
     bool relative = false, local = false; 
 };
@@ -308,7 +469,7 @@ struct PathConstraintData {
     RotateMode rotateMode = RotateMode::RotateMode_Tangent;
     float offsetRotation = 0.0f;
     float position = 0.0f, spacing = 0.0f;
-    float mixRotate = 0.0f, mixX = 0.0f, mixY = 0.0f;
+    float mixRotate = 1.0f, mixX = 1.0f, mixY = 1.0f;
 };
 
 struct PhysicsConstraintData {
@@ -316,8 +477,8 @@ struct PhysicsConstraintData {
     size_t order = 0;
     bool skinRequired = false;
     OptStr bone = std::nullopt;
-    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 0.0f, shearX = 0.0f, limit = 0.0f;
-    float fps = 0.0f, inertia = 0.0f, strength = 0.0f, damping = 0.0f, mass = 0.0f, wind = 0.0f, gravity = 0.0f, mix = 0.0f;
+    float x = 0.0f, y = 0.0f, rotate = 0.0f, scaleX = 0.0f, shearX = 0.0f, limit = 5000.0f;
+    float fps = 60.0f, inertia = 1.0f, strength = 100.0f, damping = 1.0f, mass = 1.0f, wind = 0.0f, gravity = 0.0f, mix = 1.0f;
     bool inertiaGlobal = false, strengthGlobal = false, dampingGlobal = false, massGlobal = false, windGlobal = false, gravityGlobal = false, mixGlobal = false;
 };
 
@@ -377,6 +538,42 @@ struct SkeletonData {
     std::vector<Animation> animations; 
 }; 
 
+/* common functions */
+
+Color stringToColor(const std::string& str, bool hasAlpha); 
+std::string colorToString(const Color& color, bool hasAlpha); 
+
+unsigned char readByte(DataInput*); 
+signed char readSByte(DataInput*);
+bool readBoolean(DataInput*); 
+int readInt(DataInput*); 
+Color readColor(DataInput*, bool hasAlpha = true); 
+int readVarint(DataInput*, bool optimizePositive); 
+float readFloat(DataInput*); 
+OptStr readString(DataInput*); 
+OptStr readStringRef(DataInput*, SkeletonData*); 
+
+void writeByte(Binary&, unsigned char); 
+void writeSByte(Binary&, signed char);
+void writeBoolean(Binary&, bool); 
+void writeInt(Binary&, int);
+void writeColor(Binary&, const Color&, bool hasAlpha = true); 
+void writeVarint(Binary&, int, bool optimizePositive);
+void writeFloat(Binary&, float); 
+void writeString(Binary&, const OptStr&);
+void writeStringRef(Binary&, const OptStr&, const SkeletonData&);
+
+std::string dumpJson(const Json&); 
+std::string uint64ToBase64(uint64_t);
+uint64_t base64ToUint64(const std::string&);
+
+namespace spine36 {
+    SkeletonData readBinaryData(const Binary&);
+    Binary writeBinaryData(SkeletonData&);
+    SkeletonData readJsonData(const Json&);
+    Json writeJsonData(const SkeletonData&);
+}
+
 namespace spine37 {
     SkeletonData readBinaryData(const Binary&);
     Binary writeBinaryData(SkeletonData&);
@@ -410,3 +607,5 @@ namespace spine42 {
 
 void convertCurve3xTo4x(SkeletonData& skeleton);
 void convertCurve4xTo3x(SkeletonData& skeleton);
+
+#endif // SKELETONDATA_H

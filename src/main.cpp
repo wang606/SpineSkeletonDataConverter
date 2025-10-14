@@ -4,16 +4,16 @@
 #include <vector>
 #include <filesystem>
 #include <regex>
-#include "common.h"
 
 #include "SkeletonData.h"
 
 enum class SpineVersion {
-    Version37 = 0,
-    Version38 = 1,
-    Version40 = 2,
-    Version41 = 3,
-    Version42 = 4,
+    Version36 = 0,
+    Version37 = 1,
+    Version38 = 2,
+    Version40 = 3,
+    Version41 = 4,
+    Version42 = 5,
     Invalid = -1
 };
 
@@ -34,7 +34,7 @@ struct ConversionOptions {
 };
 
 bool is3xVersion(SpineVersion version) {
-    return version == SpineVersion::Version37 || version == SpineVersion::Version38;
+    return version == SpineVersion::Version36 || version == SpineVersion::Version37 || version == SpineVersion::Version38;
 }
 
 bool is4xVersion(SpineVersion version) {
@@ -60,7 +60,9 @@ SpineVersion detectSpineVersion(const std::string& filePath) {
             std::string minorVersion = match[2].str();
             std::string majorMinor = majorVersion + "." + minorVersion;
             
-            if (majorMinor == "3.7") {
+            if (majorMinor == "3.6") {
+                return SpineVersion::Version36;
+            } else if (majorMinor == "3.7") {
                 return SpineVersion::Version37;
             } else if (majorMinor == "3.8") {
                 return SpineVersion::Version38;
@@ -82,6 +84,7 @@ SpineVersion detectSpineVersion(const std::string& filePath) {
 
 std::string getVersionString(SpineVersion version) {
     switch (version) {
+        case SpineVersion::Version36: return "3.6";
         case SpineVersion::Version37: return "3.7";
         case SpineVersion::Version38: return "3.8";
         case SpineVersion::Version40: return "4.0";
@@ -101,7 +104,8 @@ SpineVersion parseVersionString(const std::string& versionStr) {
         std::string minorVersion = match[2].str();
         std::string majorMinor = majorVersion + "." + minorVersion;
         
-        if (majorMinor == "3.7") return SpineVersion::Version37;
+        if (majorMinor == "3.6") return SpineVersion::Version36;
+        else if (majorMinor == "3.7") return SpineVersion::Version37;
         else if (majorMinor == "3.8") return SpineVersion::Version38;
         else if (majorMinor == "4.0") return SpineVersion::Version40;
         else if (majorMinor == "4.1") return SpineVersion::Version41;
@@ -140,6 +144,14 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         // Read data using input version
         SkeletonData skelData;
         switch (inputVersion) {
+            case SpineVersion::Version36: {
+                if (inputFormat == FileFormat::Skel) {
+                    skelData = spine36::readBinaryData(binaryData);
+                } else {
+                    skelData = spine36::readJsonData(jsonData);
+                }
+                break;
+            }
             case SpineVersion::Version37: {
                 if (inputFormat == FileFormat::Skel) {
                     skelData = spine37::readBinaryData(binaryData);
@@ -208,6 +220,26 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         
         // Write data using output version
         switch (outputVersion) {
+            case SpineVersion::Version36: {
+                if (outputFormat == FileFormat::Skel) {
+                    auto outputData = spine36::writeBinaryData(skelData);
+                    std::ofstream ofs(outputFile, std::ios::binary);
+                    if (!ofs) {
+                        std::cerr << "Error: Cannot create output file: " << outputFile << "\n";
+                        return false;
+                    }
+                    ofs.write(reinterpret_cast<const char*>(outputData.data()), outputData.size());
+                } else {
+                    auto outputJson = spine36::writeJsonData(skelData);
+                    std::ofstream ofs(outputFile);
+                    if (!ofs) {
+                        std::cerr << "Error: Cannot create output file: " << outputFile << "\n";
+                        return false;
+                    }
+                    ofs << dumpJson(outputJson);
+                }
+                break;
+            }
             case SpineVersion::Version37: {
                 if (outputFormat == FileFormat::Skel) {
                     auto outputData = spine37::writeBinaryData(skelData);
@@ -333,7 +365,7 @@ void printUsage(const char* programName) {
     std::cout << "  " << programName << " input.skel output.json\n";
     std::cout << "  " << programName << " input.json output.skel\n";
     std::cout << "  " << programName << " input37.json output42.skel -v 4.2.11\n\n";
-    std::cout << "Supported Spine versions: 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x\n";
+    std::cout << "Supported Spine versions: 3.6.x, 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x\n";
     std::cout << "Note: Version must be specified in complete x.y.z format (e.g., 4.2.11, not 4.2)\n";
     std::cout << "Input version detection is automatic based on file content.\n";
     std::cout << "Output version defaults to input version unless specified with -v.\n";
