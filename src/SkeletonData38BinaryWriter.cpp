@@ -741,7 +741,7 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
     writeVarint(binary, skeletonData.events.size(), true);
     for (const EventData& event : skeletonData.events) {
         writeStringRef(binary, event.name, skeletonData);
-        writeVarint(binary, event.intValue, true);
+        writeVarint(binary, event.intValue, false);
         writeFloat(binary, event.floatValue);
         writeString(binary, event.stringValue);
         writeString(binary, event.audioPath);
