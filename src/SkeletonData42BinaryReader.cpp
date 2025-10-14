@@ -1024,7 +1024,8 @@ SkeletonData readBinaryData(const Binary& binary) {
             for (const auto& [attachmenName, attachmentMap] : slotMap) {
                 if (attachmentMap.type == AttachmentType::AttachmentType_Linkedmesh) {
                     LinkedmeshAttachment& linkedMesh = (LinkedmeshAttachment&) attachmentMap.data;
-                    linkedMesh.skin = skeletonData.skins[linkedMesh.skinIndex].name;
+                    if (linkedMesh.skinIndex >= 0 && linkedMesh.skinIndex < skeletonData.skins.size())
+                        linkedMesh.skin = skeletonData.skins[linkedMesh.skinIndex].name;
                 }
             }
         }

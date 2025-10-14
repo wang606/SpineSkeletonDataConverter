@@ -362,11 +362,13 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     if ((flags & 16) != 0) writeStringRef(binary, attachment.path, skeletonData);
                     if ((flags & 32) != 0) writeColor(binary, linkedMesh.color.value());
                     if ((flags & 64) != 0) writeSequence(binary, linkedMesh.sequence.value());
-                    int skinIndex = -1;
-                    for (size_t i = 0; i < skeletonData.skins.size(); i++) {
-                        if (skeletonData.skins[i].name == linkedMesh.skin) {
-                            skinIndex = i;
-                            break;
+                    int skinIndex = 0;
+                    if (linkedMesh.skin) {
+                        for (size_t i = 0; i < skeletonData.skins.size(); i++) {
+                            if (skeletonData.skins[i].name == linkedMesh.skin.value()) {
+                                skinIndex = i;
+                                break;
+                            }
                         }
                     }
                     writeVarint(binary, skinIndex, true);

@@ -167,7 +167,7 @@ struct LinkedmeshAttachment {
     std::string parentMesh; 
     int timelines = 1; 
     int skinIndex = -1; // temporary field used for binary format reading
-    std::string skin; 
+    OptStr skin = std::nullopt; 
 }; 
 
 struct BoundingboxAttachment {
