@@ -128,10 +128,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     else writeString(binary, std::nullopt);
                     if (linkedMesh.color) writeColor(binary, linkedMesh.color.value());
                     else writeColor(binary, Color{0xff, 0xff, 0xff, 0xff});
-                    if (!linkedMesh.skin.empty())
-                        writeString(binary, linkedMesh.skin);
-                    else
-                        writeString(binary, std::nullopt); 
+                    writeString(binary, linkedMesh.skin);
                     writeString(binary, linkedMesh.parentMesh);
                     writeBoolean(binary, linkedMesh.timelines > 0); 
                     if (skeletonData.nonessential) {

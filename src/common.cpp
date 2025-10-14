@@ -178,7 +178,7 @@ void writeStringRef(Binary& binary, const OptStr& string, const SkeletonData& sk
                 break;
             }
         }
-        throw std::runtime_error("String reference not found: " + *string);
+        if (index == 0) throw std::runtime_error("String reference not found: " + *string);
     }
     writeVarint(binary, index, true);
 }

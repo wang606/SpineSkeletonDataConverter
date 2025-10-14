@@ -35,6 +35,8 @@ SkeletonData readJsonData(const Json& j) {
     if (skeleton.contains("spine")) skeletonData.version = skeleton["spine"];
     skeletonData.width = skeleton.value("width", 0.0f);
     skeletonData.height = skeleton.value("height", 0.0f);
+    if (skeleton.contains("images")) skeletonData.imagesPath = skeleton["images"];
+    skeletonData.nonessential = true; 
 
     /* Bones */
     if (j.contains("bones")) {
@@ -326,8 +328,8 @@ SkeletonData readJsonData(const Json& j) {
                     animationData.transform[transformName] = transformTimeline;
                 }
             }
-            if (animationJson.contains("path")) {
-                for (const auto& [pathName, pathJson] : animationJson["path"].items()) {
+            if (animationJson.contains("paths")) {
+                for (const auto& [pathName, pathJson] : animationJson["paths"].items()) {
                     MultiTimeline pathTimeline;
                     if (pathJson.contains("position")) {
                         readTimeline(pathJson["position"], pathTimeline["position"], 1, "position", "", 0.0f);

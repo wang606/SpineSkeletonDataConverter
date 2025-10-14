@@ -340,8 +340,8 @@ SkeletonData readJsonData(const Json& j) {
                     animationData.transform[transformName] = transformTimeline;
                 }
             }
-            if (animationJson.contains("path")) {
-                for (const auto& [pathName, pathJson] : animationJson["path"].items()) {
+            if (animationJson.contains("paths")) {
+                for (const auto& [pathName, pathJson] : animationJson["paths"].items()) {
                     MultiTimeline pathTimeline;
                     if (pathJson.contains("position")) {
                         readTimeline(pathJson["position"], pathTimeline["position"], 1, "position", "", 0.0f);
