@@ -2,83 +2,6 @@
 
 namespace spine42 {
 
-unsigned char readByte(DataInput* input) {
-    return *input->cursor++;
-}
-
-signed char readSByte(DataInput* input) {
-    return (signed char)readByte(input);
-}
-
-bool readBoolean(DataInput* input) {
-    return readByte(input) != 0;
-}
-
-int readInt(DataInput* input) {
-    int result = readByte(input);
-    result <<= 8;
-    result |= readByte(input);
-    result <<= 8;
-    result |= readByte(input);
-    result <<= 8;
-    result |= readByte(input);
-    return result;
-}
-
-Color readColor(DataInput* input, bool hasAlpha = true) {
-    Color color; 
-    color.r = readByte(input); 
-    color.g = readByte(input); 
-    color.b = readByte(input); 
-    color.a = hasAlpha ? readByte(input) : 255; 
-    return color; 
-}
-
-int readVarint(DataInput* input, bool optimizePositive) {
-    unsigned char b = readByte(input); 
-    int value = b & 0x7F; 
-    if (b & 0x80) {
-        b = readByte(input); 
-        value |= (b & 0x7F) << 7; 
-        if (b & 0x80) {
-            b = readByte(input); 
-            value |= (b & 0x7F) << 14; 
-            if (b & 0x80) {
-                b = readByte(input); 
-                value |= (b & 0x7F) << 21; 
-                if (b & 0x80) value |= (readByte(input) & 0x7F) << 28; 
-            }
-        }
-    }
-    if (!optimizePositive) value = (((unsigned int)value >> 1) ^ -(value & 1));
-    return value;
-}
-
-float readFloat(DataInput* input) {
-    union {
-        int intValue; 
-        float floatValue; 
-    } intToFloat; 
-    intToFloat.intValue = readInt(input);
-    return intToFloat.floatValue;
-}
-
-OptStr readString(DataInput* input) {
-    int length = readVarint(input, true); 
-    if (length == 0) return std::nullopt;
-    std::string string; 
-    string.resize(length - 1); 
-    memcpy(string.data(), input->cursor, length - 1); 
-    input->cursor += length - 1; 
-    return string; 
-}
-
-OptStr readStringRef(DataInput* input, SkeletonData* skeletonData) {
-    int index = readVarint(input, true); 
-    if (index == 0) return std::nullopt; 
-    else return skeletonData->strings[index - 1]; 
-}
-
 Sequence readSequence(DataInput* input) {
     Sequence sequence; 
     sequence.count = readVarint(input, true);
@@ -918,7 +841,7 @@ SkeletonData readBinaryData(const Binary& binary) {
         ikData.compress = (flags & 4) != 0;
         ikData.stretch = (flags & 8) != 0;
         ikData.uniform = (flags & 16) != 0;
-        if ((flags & 32) != 0) ikData.mix = (flags & 64) != 0 ? readFloat(&input) : 1.0f;
+        ikData.mix = (flags & 32) != 0 ? (flags & 64) != 0 ? readFloat(&input) : 1.0f : 0.0f;
         if ((flags & 128) != 0) ikData.softness = readFloat(&input); 
         skeletonData.ikConstraints.push_back(ikData);
     }
@@ -937,19 +860,19 @@ SkeletonData readBinaryData(const Binary& binary) {
         transformData.skinRequired = (flags & 1) != 0;
         transformData.local = (flags & 2) != 0;
         transformData.relative = (flags & 4) != 0;
-        if ((flags & 8) != 0) transformData.offsetRotation = readFloat(&input);
-        if ((flags & 16) != 0) transformData.offsetX = readFloat(&input);
-        if ((flags & 32) != 0) transformData.offsetY = readFloat(&input);
-        if ((flags & 64) != 0) transformData.offsetScaleX = readFloat(&input);
-        if ((flags & 128) != 0) transformData.offsetScaleY = readFloat(&input);
+        transformData.offsetRotation = (flags & 8) != 0 ? readFloat(&input) : 0.0f;
+        transformData.offsetX = (flags & 16) != 0 ? readFloat(&input) : 0.0f;
+        transformData.offsetY = (flags & 32) != 0 ? readFloat(&input) : 0.0f;
+        transformData.offsetScaleX = (flags & 64) != 0 ? readFloat(&input) : 0.0f;
+        transformData.offsetScaleY = (flags & 128) != 0 ? readFloat(&input) : 0.0f;
         flags = readByte(&input);
-        if ((flags & 1) != 0) transformData.offsetShearY = readFloat(&input);
-        if ((flags & 2) != 0) transformData.mixRotate = readFloat(&input);
-        if ((flags & 4) != 0) transformData.mixX = readFloat(&input);
-        if ((flags & 8) != 0) transformData.mixY = readFloat(&input);
-        if ((flags & 16) != 0) transformData.mixScaleX = readFloat(&input);
-        if ((flags & 32) != 0) transformData.mixScaleY = readFloat(&input);
-        if ((flags & 64) != 0) transformData.mixShearY = readFloat(&input);
+        transformData.offsetShearY = (flags & 1) != 0 ? readFloat(&input) : 0.0f;
+        transformData.mixRotate = (flags & 2) != 0 ? readFloat(&input) : 0.0f;
+        transformData.mixX = (flags & 4) != 0 ? readFloat(&input) : 0.0f;
+        transformData.mixY = (flags & 8) != 0 ? readFloat(&input) : 0.0f;
+        transformData.mixScaleX = (flags & 16) != 0 ? readFloat(&input) : 0.0f;
+        transformData.mixScaleY = (flags & 32) != 0 ? readFloat(&input) : 0.0f;
+        transformData.mixShearY = (flags & 64) != 0 ? readFloat(&input) : 0.0f;
         skeletonData.transformConstraints.push_back(transformData);
     }
 

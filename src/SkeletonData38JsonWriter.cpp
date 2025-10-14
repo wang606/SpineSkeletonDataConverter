@@ -2,61 +2,6 @@
 
 namespace spine38 {
 
-static const std::map<Inherit, std::string> inheritString = {
-    { Inherit_Normal, "normal" },
-    { Inherit_OnlyTranslation, "onlyTranslation" },
-    { Inherit_NoRotationOrReflection, "noRotationOrReflection" },
-    { Inherit_NoScale, "noScale" },
-    { Inherit_NoScaleOrReflection, "noScaleOrReflection" }
-};
-
-static const std::map<BlendMode, std::string> blendModeString = {
-    { BlendMode_Normal, "normal" },
-    { BlendMode_Additive, "additive" },
-    { BlendMode_Multiply, "multiply" },
-    { BlendMode_Screen, "screen" }
-};
-
-static const std::map<PositionMode, std::string> positionModeString = {
-    { PositionMode_Fixed, "fixed" },
-    { PositionMode_Percent, "percent" }
-};
-
-static const std::map<SpacingMode, std::string> spacingModeString = {
-    { SpacingMode_Length, "length" },
-    { SpacingMode_Fixed, "fixed" },
-    { SpacingMode_Percent, "percent" },
-    { SpacingMode_Proportional, "proportional" }
-};
-
-static const std::map<RotateMode, std::string> rotateModeString = {
-    { RotateMode_Tangent, "tangent" },
-    { RotateMode_Chain, "chain" },
-    { RotateMode_ChainScale, "chainScale" }
-};
-
-static const std::map<AttachmentType, std::string> attachmentTypeString = {
-    { AttachmentType_Region, "region" },
-    { AttachmentType_Boundingbox, "boundingbox" },
-    { AttachmentType_Mesh, "mesh" },
-    { AttachmentType_Linkedmesh, "linkedmesh" },
-    { AttachmentType_Path, "path" },
-    { AttachmentType_Point, "point" },
-    { AttachmentType_Clipping, "clipping" }
-};
-
-std::string colorToString(const Color& color, bool hasAlpha) {
-    char buffer[9];
-    snprintf(buffer, sizeof(buffer), "%02x%02x%02x", 
-             static_cast<int>(color.r), 
-             static_cast<int>(color.g), 
-             static_cast<int>(color.b));
-    if (hasAlpha) {
-        snprintf(buffer + 6, 3, "%02x", static_cast<int>(color.a));
-    }
-    return std::string(buffer);
-}
-
 void writeCurve(const TimelineFrame& frame, Json& j) {
     if (frame.curveType == CurveType::CURVE_STEPPED) {
         j["curve"] = "stepped";

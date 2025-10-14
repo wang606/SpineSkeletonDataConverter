@@ -1,4 +1,189 @@
-#include "common.h"
+#include "SkeletonData.h"
+
+// json reader
+
+Color stringToColor(const std::string& str, bool hasAlpha) {
+    Color color;
+    const char* value = str.c_str();
+    auto parseHex = [](const char* hex, size_t index) -> unsigned char {
+        if (index * 2 + 1 >= strlen(hex)) return 255;
+        char digits[3] = {hex[index * 2], hex[index * 2 + 1], '\0'};
+        return (unsigned char)strtoul(digits, nullptr, 16);
+    };
+    color.r = parseHex(value, 0);
+    color.g = parseHex(value, 1);
+    color.b = parseHex(value, 2);
+    color.a = hasAlpha ? parseHex(value, 3) : 255;
+    return color;
+}
+
+// json writer
+
+std::string colorToString(const Color& color, bool hasAlpha) {
+    char buffer[9];
+    snprintf(buffer, sizeof(buffer), "%02x%02x%02x", 
+             static_cast<int>(color.r), 
+             static_cast<int>(color.g), 
+             static_cast<int>(color.b));
+    if (hasAlpha) {
+        snprintf(buffer + 6, 3, "%02x", static_cast<int>(color.a));
+    }
+    return std::string(buffer);
+}
+
+// binary reader
+
+unsigned char readByte(DataInput* input) {
+    return *input->cursor++;
+}
+
+signed char readSByte(DataInput* input) {
+    return (signed char)readByte(input);
+}
+
+bool readBoolean(DataInput* input) {
+    return readByte(input) != 0;
+}
+
+int readInt(DataInput* input) {
+    int result = readByte(input);
+    result <<= 8;
+    result |= readByte(input);
+    result <<= 8;
+    result |= readByte(input);
+    result <<= 8;
+    result |= readByte(input);
+    return result;
+}
+
+Color readColor(DataInput* input, bool hasAlpha) {
+    Color color; 
+    color.r = readByte(input); 
+    color.g = readByte(input); 
+    color.b = readByte(input); 
+    color.a = hasAlpha ? readByte(input) : 255; 
+    return color; 
+}
+
+int readVarint(DataInput* input, bool optimizePositive) {
+    unsigned char b = readByte(input); 
+    int value = b & 0x7F; 
+    if (b & 0x80) {
+        b = readByte(input); 
+        value |= (b & 0x7F) << 7; 
+        if (b & 0x80) {
+            b = readByte(input); 
+            value |= (b & 0x7F) << 14; 
+            if (b & 0x80) {
+                b = readByte(input); 
+                value |= (b & 0x7F) << 21; 
+                if (b & 0x80) value |= (readByte(input) & 0x7F) << 28; 
+            }
+        }
+    }
+    if (!optimizePositive) value = (((unsigned int)value >> 1) ^ -(value & 1));
+    return value;
+}
+
+float readFloat(DataInput* input) {
+    union {
+        int intValue; 
+        float floatValue; 
+    } intToFloat; 
+    intToFloat.intValue = readInt(input);
+    return intToFloat.floatValue;
+}
+
+OptStr readString(DataInput* input) {
+    int length = readVarint(input, true); 
+    if (length == 0) return std::nullopt;
+    std::string string; 
+    string.resize(length - 1); 
+    memcpy(string.data(), input->cursor, length - 1); 
+    input->cursor += length - 1; 
+    return string; 
+}
+
+OptStr readStringRef(DataInput* input, SkeletonData* skeletonData) {
+    int index = readVarint(input, true); 
+    if (index == 0) return std::nullopt; 
+    else return skeletonData->strings[index - 1]; 
+}
+
+// binary writer
+
+void writeByte(Binary& binary, unsigned char value) {
+    binary.push_back(value);
+}
+
+void writeSByte(Binary& binary, signed char value) {
+    writeByte(binary, (unsigned char)value);
+}
+
+void writeBoolean(Binary& binary, bool value) {
+    writeByte(binary, value ? 1 : 0);
+}
+
+void writeInt(Binary& binary, int value) {
+    writeByte(binary, (unsigned char)(value >> 24));
+    writeByte(binary, (unsigned char)(value >> 16));
+    writeByte(binary, (unsigned char)(value >> 8));
+    writeByte(binary, (unsigned char)value);
+}
+
+void writeColor(Binary& binary, const Color& color, bool hasAlpha) {
+    writeByte(binary, color.r);
+    writeByte(binary, color.g);
+    writeByte(binary, color.b);
+    if (hasAlpha) writeByte(binary, color.a);
+}
+
+void writeVarint(Binary& binary, int value, bool optimizePositive) {
+    unsigned int unsignedValue;
+    if (!optimizePositive)
+        unsignedValue = (value << 1) ^ (value >> 31);
+    else
+        unsignedValue = value;
+    while (unsignedValue > 0x7F) {
+        writeByte(binary, (unsigned char)((unsignedValue & 0x7F) | 0x80));
+        unsignedValue >>= 7;
+    }
+    writeByte(binary, (unsigned char)(unsignedValue & 0x7F));
+}
+
+void writeFloat(Binary& binary, float value) {
+    union {
+        float floatValue;
+        int intValue;
+    } floatToInt;
+    floatToInt.floatValue = value;
+    writeInt(binary, floatToInt.intValue);
+}
+
+void writeString(Binary& binary, const OptStr& string) {
+    if (!string) {
+        writeByte(binary, 0);
+        return;
+    }
+    writeVarint(binary, string->length() + 1, true);
+    binary.insert(binary.end(), string->begin(), string->end());
+}
+
+void writeStringRef(Binary& binary, const OptStr& string, const SkeletonData& skeletonData) {
+    int index = 0;
+    if (string) {
+        for (size_t i = 0; i < skeletonData.strings.size(); i++) {
+            if (skeletonData.strings[i] == *string) {
+                index = i + 1;
+                break;
+            }
+        }
+        if (index == 0) throw std::runtime_error("String reference not found: " + *string);
+    }
+    writeVarint(binary, index, true);
+}
+
+// json writer
 
 std::string formatNumber(double v) {
     if (std::floor(v) == v) {

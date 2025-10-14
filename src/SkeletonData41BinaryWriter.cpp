@@ -3,110 +3,6 @@
 
 namespace spine41 {
 
-static const std::map<std::string, SlotTimelineType> slotTimelineTypeMap = {
-    {"attachment", SLOT_ATTACHMENT}, 
-    {"rgba", SLOT_RGBA}, 
-    {"rgb", SLOT_RGB}, 
-    {"rgba2", SLOT_RGBA2}, 
-    {"rgb2", SLOT_RGB2}, 
-    {"alpha", SLOT_ALPHA}
-};
-
-static const std::map<std::string, BoneTimelineType> boneTimelineTypeMap = {
-    {"rotate", BONE_ROTATE}, 
-    {"translate", BONE_TRANSLATE}, 
-    {"translatex", BONE_TRANSLATEX}, 
-    {"translatey", BONE_TRANSLATEY}, 
-    {"scale", BONE_SCALE}, 
-    {"scalex", BONE_SCALEX}, 
-    {"scaley", BONE_SCALEY}, 
-    {"shear", BONE_SHEAR}, 
-    {"shearx", BONE_SHEARX}, 
-    {"sheary", BONE_SHEARY}, 
-    {"inherit", BONE_INHERIT}
-};
-
-static const std::map<std::string, PathTimelineType> pathTimelineTypeMap = {
-    {"position", PATH_POSITION}, 
-    {"spacing", PATH_SPACING}, 
-    {"mix", PATH_MIX}
-};
-
-static const std::map<std::string, AttachmentTimelineType> attachmentTimelineTypeMap = {
-    {"deform", ATTACHMENT_DEFORM}, 
-    {"sequence", ATTACHMENT_SEQUENCE}
-};
-
-void writeByte(Binary& binary, unsigned char value) {
-    binary.push_back(value);
-}
-
-void writeSByte(Binary& binary, signed char value) {
-    writeByte(binary, (unsigned char)value);
-}
-
-void writeBoolean(Binary& binary, bool value) {
-    writeByte(binary, value ? 1 : 0);
-}
-
-void writeInt(Binary& binary, int value) {
-    writeByte(binary, (unsigned char)(value >> 24));
-    writeByte(binary, (unsigned char)(value >> 16));
-    writeByte(binary, (unsigned char)(value >> 8));
-    writeByte(binary, (unsigned char)value);
-}
-
-void writeColor(Binary& binary, const Color& color, bool hasAlpha = true) {
-    writeByte(binary, color.r);
-    writeByte(binary, color.g);
-    writeByte(binary, color.b);
-    if (hasAlpha) writeByte(binary, color.a);
-}
-
-void writeVarint(Binary& binary, int value, bool optimizePositive) {
-    unsigned int unsignedValue;
-    if (!optimizePositive)
-        unsignedValue = (value << 1) ^ (value >> 31);
-    else
-        unsignedValue = value;
-    while (unsignedValue > 0x7F) {
-        writeByte(binary, (unsigned char)((unsignedValue & 0x7F) | 0x80));
-        unsignedValue >>= 7;
-    }
-    writeByte(binary, (unsigned char)(unsignedValue & 0x7F));
-}
-
-void writeFloat(Binary& binary, float value) {
-    union {
-        float floatValue;
-        int intValue;
-    } floatToInt;
-    floatToInt.floatValue = value;
-    writeInt(binary, floatToInt.intValue);
-}
-
-void writeString(Binary& binary, const OptStr& string) {
-    if (!string) {
-        writeByte(binary, 0);
-        return;
-    }
-    writeVarint(binary, string->length() + 1, true);
-    binary.insert(binary.end(), string->begin(), string->end());
-}
-
-void writeStringRef(Binary& binary, const OptStr& string, const SkeletonData& skeletonData) {
-    int index = 0;
-    if (string) {
-        for (size_t i = 0; i < skeletonData.strings.size(); i++) {
-            if (skeletonData.strings[i] == *string) {
-                index = i + 1;
-                break;
-            }
-        }
-    }
-    writeVarint(binary, index, true);
-}
-
 void writeSequence(Binary& binary, const OptSequence& sequence) {
     if (!sequence) {
         writeBoolean(binary, false);
@@ -921,7 +817,7 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
     writeVarint(binary, skeletonData.events.size(), true);
     for (const EventData& event : skeletonData.events) {
         writeStringRef(binary, event.name, skeletonData);
-        writeVarint(binary, event.intValue, true);
+        writeVarint(binary, event.intValue, false);
         writeFloat(binary, event.floatValue);
         writeString(binary, event.stringValue);
         writeString(binary, event.audioPath);
