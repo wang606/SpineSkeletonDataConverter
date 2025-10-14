@@ -190,7 +190,7 @@ Json writeJsonData(const SkeletonData& skeletonData) {
                             if (linkedMesh.sequence) attachmentJson["sequence"] = writeSequence(linkedMesh.sequence.value());
                             attachmentJson["parent"] = linkedMesh.parentMesh; 
                             if (linkedMesh.timelines != 1) attachmentJson["timelines"] = linkedMesh.timelines;
-                            attachmentJson["skin"] = linkedMesh.skin;
+                            if (linkedMesh.skin) attachmentJson["skin"] = linkedMesh.skin.value();
                             break; 
                         }
                         case AttachmentType_Boundingbox: {

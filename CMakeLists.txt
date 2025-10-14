@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add spine-c/spine-cpp for syntax prompting. These won't be linked to the final executable.
+# Comment out if you don't need syntax prompting.
 
 macro(add_spine_c version)
     file(GLOB SPINE_C

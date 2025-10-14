@@ -136,7 +136,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                     attachment.path = (path.has_value() && !path->empty()) ? path.value() : attachment.name;
                     Color color = readColor(input);
                     if (color != Color{0xff, 0xff, 0xff, 0xff}) linkedMesh.color = color;
-                    linkedMesh.skin = readString(input).value_or("");
+                    linkedMesh.skin = readString(input);
                     linkedMesh.parentMesh = readString(input).value();
                     linkedMesh.timelines = readBoolean(input) ? 1 : 0;
                     if (skeletonData->nonessential) {
