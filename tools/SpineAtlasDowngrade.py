@@ -195,8 +195,10 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
             # rotate
             if region.degrees == 90:
                 output_lines.append("  rotate: true")
-            else:
+            elif region.degrees == 0:
                 output_lines.append("  rotate: false")
+            else:
+                output_lines.append(f"  rotate: {region.degrees}")
             
             # Apply scale to all region metrics
             scale = page.scale
@@ -208,12 +210,14 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
             r_height = int(region.height / scale) if scale != 1.0 else region.height
             output_lines.append(f"  size: {r_width}, {r_height}")
             
-            if region.splits:
-                splits = [str(int(s / scale)) if scale != 1.0 else str(s) for s in region.splits]
+            if region.splits and len(region.splits) >= 4:
+                splits_source = region.splits[:4]
+                splits = [str(int(s / scale)) if scale != 1.0 else str(s) for s in splits_source]
                 output_lines.append(f"  split: {', '.join(splits)}")
-            
-            if region.pads:
-                pads = [str(int(p / scale)) if scale != 1.0 else str(p) for p in region.pads]
+
+            if region.pads and len(region.pads) >= 4:
+                pads_source = region.pads[:4]
+                pads = [str(int(p / scale)) if scale != 1.0 else str(p) for p in pads_source]
                 output_lines.append(f"  pad: {', '.join(pads)}")
             
             orig_width = region.original_width if region.original_width > 0 else region.width
