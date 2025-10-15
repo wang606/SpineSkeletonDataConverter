@@ -5,19 +5,19 @@ A powerful command-line tool for converting Spine skeleton data between differen
 ## ✨ Features
 
 - **Automatic Version Detection**: Intelligently detects Spine version from `.skel` or `.json` files
-- **Multi-Version Support**: Compatible with Spine versions 3.7, 3.8, 4.0, 4.1, and 4.2
+- **Multi-Version Support**: Compatible with Spine versions 3.5, 3.6, 3.7, 3.8, 4.0, 4.1, and 4.2
 - **Smart Format Detection**: Automatically detects file formats based on file extensions
 - **Cross-Platform**: Built with C++20 and CMake for maximum portability
 - **Comprehensive Testing**: Includes test suites for all supported versions
 
 ## 📋 Format Support Matrix
 
-|           | 3.7 | 3.8 | 4.0 | 4.1 | 4.2 |
-| --------- | --- | --- | --- | --- | --- |
-| JSON Reader | ✅ | ✅ | ✅ | ✅ | ✅  |
-| JSON Writer | ✅ | ✅ | ✅ | ✅ | ✅  |
-| Binary Reader | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Binary Writer | ✅ | ✅ | ✅ | ✅ | ✅ |
+|           | 3.5 | 3.6 | 3.7 | 3.8 | 4.0 | 4.1 | 4.2 |
+| --------- | --- | --- | --- | --- | --- | --- | --- |
+| JSON Reader | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅  |
+| JSON Writer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅  |
+| Binary Reader | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Binary Writer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **Legend**: ✅ Supported | 🚧 In Development | ❌ Not Supported
 
@@ -42,16 +42,16 @@ cmake --build . --config Release
 
 ```bash
 # Basic skeleton format conversion (same version)
-./SpineSkeletonDataConverter.exe input.skel output.json
+SpineSkeletonDataConverter.exe input.skel output.json
 
 # The tool auto-detects file formats from extensions
-./SpineSkeletonDataConverter.exe input.json output.skel
+SpineSkeletonDataConverter.exe input.json output.skel
 
 # Cross-version conversion (convert 3.7 file to 4.2 format)
-./SpineSkeletonDataConverter.exe input37.json output42.json -v 4.2.11
+SpineSkeletonDataConverter.exe input37.json output42.json -v 4.2.11
 
 # Convert new binary format to old version
-./SpineSkeletonDataConverter.exe new.skel old.json -v 3.8.99
+SpineSkeletonDataConverter.exe new.skel old.json -v 3.8.99
 
 # Supported file formats:
 #   .json       Spine JSON format
@@ -61,24 +61,25 @@ cmake --build . --config Release
 #   -v          Output version (must be complete: x.y.z format)
 #   --help      Show this help message
 
-# Supported Spine versions: 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x
+# Supported Spine versions: 3.5.x, 3.6.x, 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x
 # Note: Version must be specified in complete x.y.z format (e.g., 4.2.11, not 4.2)
 # Input version detection is automatic based on file content.
 # Output version defaults to input version unless specified with -v.
 ```
 
-## ⭐ Convert 4.x To 3.8
+## 🛠️ Spine Atlas 4.x to 3.x Downgrade
 
-Convert complete Spine 4.x projects to 3.8 format (skeleton data + atlas + images).
+A dedicated Python script for converting Spine 4.x atlas files to a 3.x compatible format.
 
+**Features:**
+
+- Converts `.atlas` file format, applying the `scale` property to all relevant metrics.
+- Scales the associated PNG texture images according to the `scale` property.
+
+**Usage:**
 ```bash
-$ python ./Spine4xTo38Converter.py input.json output_dir --converter ./SpineSkeletonDataConverter.exe
+python SpineAtlasDowngrade.py input.atlas output_dir
 ```
-
-The tool automatically:
-1. Converts skeleton data using SpineSkeletonDataConverter.exe
-2. Converts atlas file from 4.x to 3.8 format 
-3. Scales PNG images according to atlas scale properties
 
 ## 🧪 Testing
 
