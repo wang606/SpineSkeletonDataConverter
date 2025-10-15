@@ -81,6 +81,15 @@ A dedicated Python script for converting Spine 4.x atlas files to a 3.x compatib
 python SpineAtlasDowngrade.py input.atlas output_dir
 ```
 
+The repository now also provides a native executable `SpineAtlasDowngrade` that mirrors the Python script.
+Build it via CMake and run:
+
+```
+SpineAtlasDowngrade.exe input.atlas output_dir
+```
+
+When downgrading, textures are resized using stb; currently the native converter only supports PNG texture pages, so convert other formats in advance.
+
 ## 🧪 Testing
 
 The project includes comprehensive testing tools to validate conversion accuracy and data integrity across all supported Spine versions.
@@ -130,6 +139,7 @@ $ python ./tools/json_diff.py ./data/42/example/export/example.json ./data/42/ex
 
 - [Spine Runtime](http://esotericsoftware.com/) - For the excellent 2D animation software
 - [nlohmann/json](https://github.com/nlohmann/json) - For the JSON library
+- [stb libraries](https://github.com/nothings/stb) - For lightweight image loading, resizing, and writing
 - Contributors and testers who helped improve this tool
 
 ---

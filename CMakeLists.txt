@@ -68,3 +68,9 @@ add_executable(SpineSkeletonDataConverter
 )
 
 target_include_directories(SpineSkeletonDataConverter PRIVATE "include")
+
+add_executable(SpineAtlasDowngrade
+    "src/SpineAtlasDowngrade.cpp"
+)
+
+target_include_directories(SpineAtlasDowngrade PRIVATE "include")
