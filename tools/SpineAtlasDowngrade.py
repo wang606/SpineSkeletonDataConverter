@@ -152,6 +152,11 @@ def read_atlas_data_4x(content: str) -> AtlasData:
                 region.width, region.height = map(int, values)
             elif key == "offset" and len(values) >= 2:
                 region.offset_x, region.offset_y = map(int, values)
+            elif key == "offsets" and len(values) >= 4:
+                region.offset_x = int(values[0])
+                region.offset_y = int(values[1])
+                region.original_width = int(values[2])
+                region.original_height = int(values[3])
             elif key == "orig" and len(values) >= 2:
                 region.original_width, region.original_height = map(int, values)
             elif key == "rotate" and values:
@@ -192,7 +197,7 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
         for region in page.regions:
             output_lines.append(region.name)
             
-            # rotate
+            # rotate (support numeric angles)
             if region.degrees == 90:
                 output_lines.append("  rotate: true")
             elif region.degrees == 0:

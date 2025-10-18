@@ -191,6 +191,11 @@ AtlasData readAtlasData4x(const std::string& content) {
 			} else if (key == "offset" && values.size() >= 2) {
 				parseInt(values[0], region.offsetX);
 				parseInt(values[1], region.offsetY);
+			} else if (key == "offsets" && values.size() >= 4) {
+				parseInt(values[0], region.offsetX);
+				parseInt(values[1], region.offsetY);
+				parseInt(values[2], region.originalWidth);
+				parseInt(values[3], region.originalHeight);
 			} else if (key == "orig" && values.size() >= 2) {
 				parseInt(values[0], region.originalWidth);
 				parseInt(values[1], region.originalHeight);
