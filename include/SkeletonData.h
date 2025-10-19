@@ -1,6 +1,7 @@
 #ifndef SKELETONDATA_H
 #define SKELETONDATA_H
 
+#include <iostream>
 #include <map>
 #include <optional>
 #include <string>

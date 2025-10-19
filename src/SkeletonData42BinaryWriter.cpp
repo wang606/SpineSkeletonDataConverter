@@ -230,7 +230,18 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     if ((flags & 16) != 0) writeStringRef(binary, attachment.path, skeletonData);
                     if ((flags & 32) != 0) writeColor(binary, mesh.color.value());
                     if ((flags & 64) != 0) writeSequence(binary, mesh.sequence.value());
-                    writeVarint(binary, mesh.hullLength, true);
+
+                    // 详见 https://github.com/wang606/SpineSkeletonDataConverter/issues/4 
+                    // 按理来说 mesh.triangles.size() = (vertexCount * 2 - mesh.hullLength - 2) * 3
+                    // 为了让 Spine 官方工具能正确读取，这里写入计算得到的 hullLength
+                    // writeVarint(binary, mesh.hullLength, true);
+                    int actualHullLength = mesh.uvs.size() - mesh.triangles.size() / 3 - 2; 
+                    writeVarint(binary, actualHullLength, true);
+                    if (actualHullLength != mesh.hullLength) {
+                        std::cout << "Warning: Mismatch hullLength for mesh attachment '" << attachment.name << "'. Expected: " << mesh.hullLength << ", Actual: " << actualHullLength << std::endl;
+                        std::cout << "Actual hullLength will be written to the binary file." << std::endl;
+                    }
+                    
                     writeVertices(binary, mesh.vertices, (flags & 128) != 0);
                     writeFloatArray(binary, mesh.uvs);
                     writeShortArray(binary, mesh.triangles);
