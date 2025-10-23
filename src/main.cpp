@@ -32,14 +32,15 @@ struct ConversionOptions {
     SpineVersion outputVersion = SpineVersion::Invalid;
     std::string outputVersionString; // 完整的版本号字符串，如 "4.2.11"
     bool help = false;
+    bool removeCurve = false;
 };
 
-bool is3xVersion(SpineVersion version) {
-    return version == SpineVersion::Version35 || version == SpineVersion::Version36 || version == SpineVersion::Version37 || version == SpineVersion::Version38;
+bool aboveOrEqualVersion(SpineVersion version, SpineVersion target) {
+    return static_cast<int>(version) >= static_cast<int>(target);
 }
 
-bool is4xVersion(SpineVersion version) {
-    return version == SpineVersion::Version40 || version == SpineVersion::Version41 || version == SpineVersion::Version42;
+bool belowOrEqualVersion(SpineVersion version, SpineVersion target) {
+    return static_cast<int>(version) <= static_cast<int>(target);
 }
 
 SpineVersion detectSpineVersion(const std::string& filePath) {
@@ -123,7 +124,8 @@ SpineVersion parseVersionString(const std::string& versionStr) {
 bool convertFile(const std::string& inputFile, const std::string& outputFile, 
                 FileFormat inputFormat, FileFormat outputFormat, 
                 SpineVersion inputVersion, SpineVersion outputVersion, 
-                const std::string& outputVersionString) {
+                const std::string& outputVersionString,
+                bool removeCurveOption) {
     
     try {
         // Read input file
@@ -216,19 +218,30 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         }
         
         // 跨版本转换处理
-        if (inputVersion != outputVersion) {
-            bool inputIs3x = is3xVersion(inputVersion);
-            bool inputIs4x = is4xVersion(inputVersion);
-            bool outputIs3x = is3xVersion(outputVersion);
-            bool outputIs4x = is4xVersion(outputVersion);
-            
-            if (inputIs3x && outputIs4x) {
-                std::cout << "Performing 3.x to 4.x conversion...\n";
-                convertCurve3xTo4x(skelData);
-            } else if (inputIs4x && outputIs3x) {
-                std::cout << "Performing 4.x to 3.x conversion...\n";
+        if (aboveOrEqualVersion(inputVersion, SpineVersion::Version40) &&
+            belowOrEqualVersion(outputVersion, SpineVersion::Version38)) {
+            if (removeCurveOption) {
+                std::cout << "Converting from 4.x to 3.x with --remove-curve, stripping curves...\n";
+                removeCurve(skelData);
+            } else {
+                std::cout << "Converting from 4.x to 3.x, adjusting curve format from abs to rel...\n"; 
                 convertCurve4xTo3x(skelData);
             }
+        }
+        if (belowOrEqualVersion(inputVersion, SpineVersion::Version38) &&
+            aboveOrEqualVersion(outputVersion, SpineVersion::Version40)) {
+            if (removeCurveOption) {
+                std::cout << "Converting from 3.x to 4.x with --remove-curve, stripping curves...\n";
+                removeCurve(skelData);
+            } else {
+                std::cout << "Converting from 3.x to 4.x, adjusting curve format from rel to abs...\n"; 
+                convertCurve3xTo4x(skelData);
+            }
+        }
+        if (aboveOrEqualVersion(inputVersion, SpineVersion::Version42) &&
+            belowOrEqualVersion(outputVersion, SpineVersion::Version41)) {
+            std::cout << "Converting from 4.2 to below 4.2, adjusting constraint order...\n"; 
+            convertOrder42ToBelow(skelData);
         }
         
         // Write data using output version
@@ -393,6 +406,7 @@ void printUsage(const char* programName) {
     std::cout << "  .skel       Spine binary (SKEL) format\n\n";
     std::cout << "Options:\n";
     std::cout << "  -v          Output version (must be complete: x.y.z format)\n";
+    std::cout << "  --remove-curve  Strip animation curves instead of converting between formats\n";
     std::cout << "  --help      Show this help message\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName << " input.skel output.json\n";
@@ -461,6 +475,8 @@ ConversionOptions parseArguments(int argc, char* argv[]) {
             }
         } else if (arg == "--help") {
             options.help = true;
+        } else if (arg == "--remove-curve") {
+            options.removeCurve = true;
         } else {
             std::cerr << "Warning: Unknown option: " << arg << "\n";
         }
@@ -507,10 +523,13 @@ int main(int argc, char* argv[]) {
             }
             std::cout << "\n";
         }
+        if (options.removeCurve) {
+            std::cout << "Option --remove-curve enabled: curves will be stripped instead of converted when crossing 3.x/4.x.\n";
+        }
         std::cout << "Converting from " << (options.inputFormat == FileFormat::Json ? "JSON" : "SKEL") 
                   << " to " << (options.outputFormat == FileFormat::Json ? "JSON" : "SKEL") << "...\n";
         
-        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString)) {
+        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString, options.removeCurve)) {
             std::cout << "Conversion completed successfully!\n";
             std::cout << "Output file: " << options.outputFile << "\n";
             return 0;

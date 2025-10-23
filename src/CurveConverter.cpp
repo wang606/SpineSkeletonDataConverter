@@ -182,3 +182,32 @@ void convertCurve4xTo3x(SkeletonData& skeleton) {
                             convertTimelineCurve4xTo3x(timeline, CurveYType::ZeroOne);
     }
 }
+
+void removeCurve(SkeletonData& skeleton) {
+    for (auto& animation : skeleton.animations) {
+        for (auto& [slotName, multiTimeline] : animation.slots)
+            for (auto& [timelineType, timeline] : multiTimeline)
+                for (auto& frame : timeline)
+                    frame.curveType = CurveType::CURVE_LINEAR;
+        for (auto& [boneName, multiTimeline] : animation.bones)
+            for (auto& [timelineType, timeline] : multiTimeline)
+                for (auto& frame : timeline)
+                    frame.curveType = CurveType::CURVE_LINEAR;
+        for (auto& [ikName, timeline] : animation.ik)
+            for (auto& frame : timeline)
+                frame.curveType = CurveType::CURVE_LINEAR;
+        for (auto& [transformName, timeline] : animation.transform)
+            for (auto& frame : timeline)
+                frame.curveType = CurveType::CURVE_LINEAR;
+        for (auto& [pathName, multiTimeline] : animation.path)
+            for (auto& [timelineType, timeline] : multiTimeline)
+                for (auto& frame : timeline)
+                    frame.curveType = CurveType::CURVE_LINEAR;
+        for (auto& [skinName, skin] : animation.attachments)
+            for (auto& [slotName, slot] : skin)
+                for (auto& [attachmentName, multiTimeline] : slot)
+                    for (auto& [timelineType, timeline] : multiTimeline)
+                        for (auto& frame : timeline)
+                            frame.curveType = CurveType::CURVE_LINEAR;
+    }
+}

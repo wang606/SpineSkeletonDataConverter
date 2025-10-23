@@ -615,5 +615,7 @@ namespace spine42 {
 
 void convertCurve3xTo4x(SkeletonData& skeleton);
 void convertCurve4xTo3x(SkeletonData& skeleton);
+void removeCurve(SkeletonData& skeleton);
+void convertOrder42ToBelow(SkeletonData& skeleton);
 
 #endif // SKELETONDATA_H

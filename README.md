@@ -58,8 +58,9 @@ SpineSkeletonDataConverter.exe new.skel old.json -v 3.8.99
 #   .skel       Spine binary (SKEL) format
 
 # Options:
-#   -v          Output version (must be complete: x.y.z format)
-#   --help      Show this help message
+#   -v              Output version (must be complete: x.y.z format)
+#   --remove-curve  Strip animation curves instead of converting when crossing 3.x/4.x
+#   --help          Show this help message
 
 # Supported Spine versions: 3.5.x, 3.6.x, 3.7.x, 3.8.x, 4.0.x, 4.1.x, 4.2.x
 # Note: Version must be specified in complete x.y.z format (e.g., 4.2.11, not 4.2)
@@ -89,6 +90,23 @@ SpineAtlasDowngrade.exe input.atlas output_dir
 ```
 
 When downgrading, textures are resized using stb; currently the native converter only supports PNG texture pages, so convert other formats in advance.
+
+## 🧰 Batch Conversion Script
+
+For large directories of Spine assets, use the bundled helper script `tools/SpineConverter.py` to drive both `SpineSkeletonDataConverter.exe` and `SpineAtlasDowngrade.exe` automatically.
+
+```bash
+python tools/SpineConverter.py <input_dir> <output_dir> \
+	[-v x.y.z] \
+	[--format same|json|skel|other] \
+	[--remove-curve]
+```
+
+- Recursively processes `.json`, `.skel`, and `.atlas` files, preserving the folder structure in the output directory.
+- `-v` overrides the target skeleton version (defaults to each file's original version).
+- `--format` controls output formats for `.json`/`.skel` files (`same` keeps the original format, `json`/`skel` force a specific format, and `other` swaps between the two).
+- `--remove-curve` forwards to the native converter, stripping animation curves instead of translating them when converting between 3.x and 4.x.
+- `.atlas` files are always downgraded through `SpineAtlasDowngrade.exe`.
 
 ## 🧪 Testing
 
