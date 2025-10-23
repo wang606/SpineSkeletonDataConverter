@@ -161,6 +161,6 @@ $ python ./tools/json_diff.py ./data/42/example/export/example.json ./data/42/ex
 - Contributors and testers who helped improve this tool
 
 ## ⚖️License
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
-See the LICENSE file for details.
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/).
 
+You may use, modify, and share this project for noncommercial purposes only, and must retain attribution to the original author.
