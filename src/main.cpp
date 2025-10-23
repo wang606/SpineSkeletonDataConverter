@@ -7,6 +7,8 @@
 
 #include "SkeletonData.h"
 
+#define CONVERTER_API __declspec(dllexport) __cdecl
+
 enum class SpineVersion {
     Version35 = 0,
     Version36 = 1,
@@ -121,36 +123,12 @@ SpineVersion parseVersionString(const std::string& versionStr) {
     return SpineVersion::Invalid;
 }
 
-bool convertFile(const std::string& inputFile, const std::string& outputFile, 
-                FileFormat inputFormat, FileFormat outputFormat, 
-                SpineVersion inputVersion, SpineVersion outputVersion, 
-                const std::string& outputVersionString,
-                bool removeCurveOption) {
-    
-    try {
-        // Read input file
-        std::vector<unsigned char> binaryData;
-        Json jsonData;
-        
-        if (inputFormat == FileFormat::Skel) {
-            std::ifstream ifs(inputFile, std::ios::binary);
-            if (!ifs) {
-                std::cerr << "Error: Cannot open input file: " << inputFile << "\n";
-                return false;
-            }
-            binaryData.assign((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-        } else if (inputFormat == FileFormat::Json) {
-            std::ifstream ifs(inputFile);
-            if (!ifs) {
-                std::cerr << "Error: Cannot open input file: " << inputFile << "\n";
-                return false;
-            }
-            ifs >> jsonData;
-        }
-        
-        // Read data using input version
-        SkeletonData skelData;
-        switch (inputVersion) {
+
+template<typename Binary>
+bool LoadSkeletonData(SkeletonData& outSkelData, SpineVersion inputVersion, FileFormat inputFormat, const Binary& binaryData,
+    const Json& jsonData = {}) {
+    SkeletonData skelData;
+    switch (inputVersion) {
             case SpineVersion::Version35: {
                 if (inputFormat == FileFormat::Skel) {
                     skelData = spine35::readBinaryData(binaryData);
@@ -209,40 +187,81 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
             }
             default:
                 std::cerr << "Error: Unsupported input Spine version\n";
-                return false;
+            return false;
         }
+    outSkelData = skelData;
+    return true;
+}
+
+void PerformCrossVersionCast(SpineVersion inputVersion, SpineVersion outputVersion,
+    SkeletonData& skelData, bool removeCurveOption) {
+    // 跨版本转换处理
+    // 跨版本转换处理
+    if (aboveOrEqualVersion(inputVersion, SpineVersion::Version40) &&
+        belowOrEqualVersion(outputVersion, SpineVersion::Version38)) {
+        if (removeCurveOption) {
+            std::cout << "Converting from 4.x to 3.x with --remove-curve, stripping curves...\n";
+            removeCurve(skelData);
+        } else {
+            std::cout << "Converting from 4.x to 3.x, adjusting curve format from abs to rel...\n"; 
+            convertCurve4xTo3x(skelData);
+        }
+        }
+    if (belowOrEqualVersion(inputVersion, SpineVersion::Version38) &&
+        aboveOrEqualVersion(outputVersion, SpineVersion::Version40)) {
+        if (removeCurveOption) {
+            std::cout << "Converting from 3.x to 4.x with --remove-curve, stripping curves...\n";
+            removeCurve(skelData);
+        } else {
+            std::cout << "Converting from 3.x to 4.x, adjusting curve format from rel to abs...\n"; 
+            convertCurve3xTo4x(skelData);
+        }
+        }
+    if (aboveOrEqualVersion(inputVersion, SpineVersion::Version42) &&
+        belowOrEqualVersion(outputVersion, SpineVersion::Version41)) {
+        std::cout << "Converting from 4.2 to below 4.2, adjusting constraint order...\n"; 
+        convertOrder42ToBelow(skelData);
+        }
+}
+
+bool convertFile(const std::string& inputFile, const std::string& outputFile, 
+                FileFormat inputFormat, FileFormat outputFormat, 
+                SpineVersion inputVersion, SpineVersion outputVersion, 
+                const std::string& outputVersionString,
+                bool removeCurveOption) {
+    
+    try {
+        // Read input file
+        std::vector<unsigned char> binaryData;
+        Json jsonData;
+        
+        if (inputFormat == FileFormat::Skel) {
+            std::ifstream ifs(inputFile, std::ios::binary);
+            if (!ifs) {
+                std::cerr << "Error: Cannot open input file: " << inputFile << "\n";
+                return false;
+            }
+            binaryData.assign((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+        } else if (inputFormat == FileFormat::Json) {
+            std::ifstream ifs(inputFile);
+            if (!ifs) {
+                std::cerr << "Error: Cannot open input file: " << inputFile << "\n";
+                return false;
+            }
+            ifs >> jsonData;
+        }
+        
+        // Read data using input version
+        SkeletonData skelData;
+        if (!LoadSkeletonData(skelData, inputVersion, inputFormat, binaryData, jsonData))
+            return false;
         
         // 如果指定了输出版本字符串，则设置版本号
         if (!outputVersionString.empty()) {
             skelData.version = outputVersionString;
         }
         
-        // 跨版本转换处理
-        if (aboveOrEqualVersion(inputVersion, SpineVersion::Version40) &&
-            belowOrEqualVersion(outputVersion, SpineVersion::Version38)) {
-            if (removeCurveOption) {
-                std::cout << "Converting from 4.x to 3.x with --remove-curve, stripping curves...\n";
-                removeCurve(skelData);
-            } else {
-                std::cout << "Converting from 4.x to 3.x, adjusting curve format from abs to rel...\n"; 
-                convertCurve4xTo3x(skelData);
-            }
-        }
-        if (belowOrEqualVersion(inputVersion, SpineVersion::Version38) &&
-            aboveOrEqualVersion(outputVersion, SpineVersion::Version40)) {
-            if (removeCurveOption) {
-                std::cout << "Converting from 3.x to 4.x with --remove-curve, stripping curves...\n";
-                removeCurve(skelData);
-            } else {
-                std::cout << "Converting from 3.x to 4.x, adjusting curve format from rel to abs...\n"; 
-                convertCurve3xTo4x(skelData);
-            }
-        }
-        if (aboveOrEqualVersion(inputVersion, SpineVersion::Version42) &&
-            belowOrEqualVersion(outputVersion, SpineVersion::Version41)) {
-            std::cout << "Converting from 4.2 to below 4.2, adjusting constraint order...\n"; 
-            convertOrder42ToBelow(skelData);
-        }
+        PerformCrossVersionCast(inputVersion, outputVersion, skelData, removeCurveOption);
         
         // Write data using output version
         switch (outputVersion) {
@@ -542,5 +561,119 @@ int main(int argc, char* argv[]) {
         std::cerr << "Supported conversions:\n";
         std::cerr << "  - .json <-> .skel (skeleton data conversion)\n";
         return 1;
+    }
+}
+
+SpineVersion detectSpineVersion(const uint8_t* buffer, size_t len) {
+    try {
+        if (len < 256)
+            return SpineVersion::Invalid;
+        
+        constexpr size_t headerSize = 256;
+        std::string data((const char*)buffer, headerSize);
+        
+        // Use regex to find version pattern x.x.x
+        std::regex versionRegex(R"((\d+)\.(\d+)\.(\d+))");
+        std::smatch match;
+        
+        if (std::regex_search(data, match, versionRegex)) {
+            std::string majorVersion = match[1].str();
+            std::string minorVersion = match[2].str();
+            std::string majorMinor = majorVersion + "." + minorVersion;
+            
+            if (majorMinor == "3.5") {
+                return SpineVersion::Version35;
+            } else if (majorMinor == "3.6") {
+                return SpineVersion::Version36;
+            } else if (majorMinor == "3.7") {
+                return SpineVersion::Version37;
+            } else if (majorMinor == "3.8") {
+                return SpineVersion::Version38;
+            } else if (majorMinor == "4.0") {
+                return SpineVersion::Version40;
+            } else if (majorMinor == "4.1") {
+                return SpineVersion::Version41;
+            } else if (majorMinor == "4.2") {
+                return SpineVersion::Version42;
+            }
+        }
+    }
+    catch (...) {
+    }
+    
+    return SpineVersion::Invalid;
+}
+
+extern "C"
+{
+
+     int CONVERTER_API CastSkeletonDataToDstVersion(
+        const uint8_t* inBuf, int inLen, int dstVersion,
+        uint8_t** outPtr, int* outLen) {
+        if (dstVersion < (int)SpineVersion::Version35 || dstVersion > (int)SpineVersion::Version42) {
+            return 1; // Invalid Version.
+        }
+        auto srcVersion = detectSpineVersion(inBuf, inLen);
+        if (srcVersion == SpineVersion::Invalid) {
+            return 2; // Invalid Input.
+        }
+
+        if ((int)srcVersion == dstVersion) {
+            *outLen = 0;
+            *outPtr = nullptr;
+            return 0; // Success, no cast need
+        }
+        Binary data;
+        data.insert(data.begin(), inBuf, inBuf + inLen);
+
+        // Read data using input version
+        SkeletonData skelData;
+        if (!LoadSkeletonData(skelData, srcVersion, FileFormat::Skel, data
+            ))
+            return 3; // Failed to load.
+            
+        // 如果指定了输出版本字符串，则设置版本号
+        //Hard coded.
+        skelData.version = "4.2.34";
+            
+        PerformCrossVersionCast(srcVersion, (SpineVersion)dstVersion, skelData, false);
+
+        constexpr static FileFormat outputFormat = FileFormat::Skel;
+        std::vector<unsigned char> dst;
+        
+        // Write data using output version
+        switch ((SpineVersion)dstVersion) {//SpineVersion::Version35, spine35
+    #define OUTPUT_VERSION(VERSION, NAMESPACE) \
+            case VERSION: { \
+                if (outputFormat == FileFormat::Skel) { \
+                    auto outputData = NAMESPACE::writeBinaryData(skelData); \
+                    dst.insert(dst.begin(), outputData.begin(), outputData.end()); \
+                } else { \
+                    auto outputJson = NAMESPACE::writeJsonData(skelData); \
+                    auto result = dumpJson(outputJson); \
+                    dst.insert(dst.begin(), result.begin(), result.end()); \
+                } \
+                break; \
+            } 
+            OUTPUT_VERSION(SpineVersion::Version35, spine35)
+            OUTPUT_VERSION(SpineVersion::Version36, spine36)
+            OUTPUT_VERSION(SpineVersion::Version37, spine37)
+            OUTPUT_VERSION(SpineVersion::Version38, spine38)
+            OUTPUT_VERSION(SpineVersion::Version40, spine40)
+            OUTPUT_VERSION(SpineVersion::Version41, spine41)
+            OUTPUT_VERSION(SpineVersion::Version42, spine42)
+            default:
+                std::cerr << "Error: Unsupported output Spine version\n";
+                return 4;
+        }
+        void* dstBuffer = new uint8_t[dst.size()];
+        memcpy(dstBuffer, &dst.front(), dst.size());
+        *outLen = dst.size();
+        *outPtr = static_cast<unsigned char*>(dstBuffer);
+        return 0;
+    }
+
+    void CONVERTER_API FreeBuffer(void* p) {
+        delete[] (unsigned char*)p;
     }
 }
