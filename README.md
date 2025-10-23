@@ -96,7 +96,7 @@ The project includes comprehensive testing tools to validate conversion accuracy
 
 For each Spine version, we recommend running three rounds of tests to ensure complete functionality:
 
-#### Round 1: JSON Round-trip Test (JSON → JSON)
+### Round 1: JSON Round-trip Test (JSON → JSON)
 Tests JSON reading and writing functionality. The generated `.json.json` files should be identical to the original `.json` files.
 
 ```bash
@@ -110,7 +110,7 @@ $ python ./tools/json_diff_all.py ./data/42 .json .json.json
 $ python ./tools/json_diff.py ./data/42/chibi-stickers/export/chibi-stickers.json ./data/42/chibi-stickers/export/chibi-stickers.json.json
 ```
 
-#### Round 2: SKEL to JSON Test (SKEL → JSON)
+### Round 2: SKEL to JSON Test (SKEL → JSON)
 Tests SKEL reading functionality. The generated `.skel.json` files don't need to be identical to original JSON files, as SKEL and JSON formats have inherent differences.
 
 ```bash
@@ -121,7 +121,7 @@ $ python ./tools/TestSpineSkeletonDataConverter.py --exe ./build/Debug/SpineSkel
 $ python ./tools/json_diff_all.py ./data/42 .json .skel.json
 ```
 
-#### Round 3: Full Round-trip Test (JSON → SKEL → JSON)
+### Round 3: Full Round-trip Test (JSON → SKEL → JSON)
 Tests complete functionality: JSON reader, SKEL writer, SKEL reader, and JSON writer. The final `.json.skel.json` files should be identical to the original `.json` files.
 
 ```bash
@@ -142,7 +142,7 @@ $ python ./tools/json_diff.py ./data/42/example/export/example.json ./data/42/ex
 - [stb libraries](https://github.com/nothings/stb) - For lightweight image loading, resizing, and writing
 - Contributors and testers who helped improve this tool
 
----
-
-**Made with ❤️ for the Spine animation community**
+## ⚖️License
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+See the LICENSE file for details.
 
