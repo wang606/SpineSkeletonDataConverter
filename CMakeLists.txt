@@ -32,40 +32,43 @@ add_spine_cpp(40)
 add_spine_cpp(41)
 add_spine_cpp(42)
 
+set(CONVERTER_SRCS
+        "include/json.hpp"
+        "src/main.cpp"
+        "src/common.cpp"
+        "src/CurveConverter.cpp"
+        "src/OrderConverter.cpp"
+        "src/SkeletonData35BinaryReader.cpp"
+        "src/SkeletonData35BinaryWriter.cpp"
+        "src/SkeletonData35JsonReader.cpp"
+        "src/SkeletonData35JsonWriter.cpp"
+        "src/SkeletonData36BinaryReader.cpp"
+        "src/SkeletonData36BinaryWriter.cpp"
+        "src/SkeletonData36JsonReader.cpp"
+        "src/SkeletonData36JsonWriter.cpp"
+        "src/SkeletonData37BinaryReader.cpp"
+        "src/SkeletonData37BinaryWriter.cpp"
+        "src/SkeletonData37JsonReader.cpp"
+        "src/SkeletonData37JsonWriter.cpp"
+        "src/SkeletonData38BinaryReader.cpp"
+        "src/SkeletonData38BinaryWriter.cpp"
+        "src/SkeletonData38JsonReader.cpp"
+        "src/SkeletonData38JsonWriter.cpp"
+        "src/SkeletonData40BinaryReader.cpp"
+        "src/SkeletonData40BinaryWriter.cpp"
+        "src/SkeletonData40JsonReader.cpp"
+        "src/SkeletonData40JsonWriter.cpp"
+        "src/SkeletonData41BinaryReader.cpp"
+        "src/SkeletonData41BinaryWriter.cpp"
+        "src/SkeletonData41JsonReader.cpp"
+        "src/SkeletonData41JsonWriter.cpp"
+        "src/SkeletonData42BinaryReader.cpp"
+        "src/SkeletonData42BinaryWriter.cpp"
+        "src/SkeletonData42JsonReader.cpp"
+        "src/SkeletonData42JsonWriter.cpp")
+
 add_executable(SpineSkeletonDataConverter
-    "include/json.hpp"
-    "src/main.cpp"
-    "src/common.cpp"
-    "src/CurveConverter.cpp"
-    "src/OrderConverter.cpp"
-    "src/SkeletonData35BinaryReader.cpp"
-    "src/SkeletonData35BinaryWriter.cpp"
-    "src/SkeletonData35JsonReader.cpp"
-    "src/SkeletonData35JsonWriter.cpp"
-    "src/SkeletonData36BinaryReader.cpp"
-    "src/SkeletonData36BinaryWriter.cpp"
-    "src/SkeletonData36JsonReader.cpp"
-    "src/SkeletonData36JsonWriter.cpp"
-    "src/SkeletonData37BinaryReader.cpp"
-    "src/SkeletonData37BinaryWriter.cpp"
-    "src/SkeletonData37JsonReader.cpp"
-    "src/SkeletonData37JsonWriter.cpp"
-    "src/SkeletonData38BinaryReader.cpp"
-    "src/SkeletonData38BinaryWriter.cpp"
-    "src/SkeletonData38JsonReader.cpp"
-    "src/SkeletonData38JsonWriter.cpp"
-    "src/SkeletonData40BinaryReader.cpp"
-    "src/SkeletonData40BinaryWriter.cpp"
-    "src/SkeletonData40JsonReader.cpp"
-    "src/SkeletonData40JsonWriter.cpp"
-    "src/SkeletonData41BinaryReader.cpp"
-    "src/SkeletonData41BinaryWriter.cpp"
-    "src/SkeletonData41JsonReader.cpp"
-    "src/SkeletonData41JsonWriter.cpp"
-    "src/SkeletonData42BinaryReader.cpp"
-    "src/SkeletonData42BinaryWriter.cpp"
-    "src/SkeletonData42JsonReader.cpp"
-    "src/SkeletonData42JsonWriter.cpp"
+        ${CONVERTER_SRCS}
 )
 
 target_include_directories(SpineSkeletonDataConverter PRIVATE "include")
@@ -75,3 +78,12 @@ add_executable(SpineAtlasDowngrade
 )
 
 target_include_directories(SpineAtlasDowngrade PRIVATE "include")
+
+add_library(SpineSkeletonDataConverterLib SHARED
+        ${CONVERTER_SRCS}
+)
+
+target_include_directories(SpineSkeletonDataConverterLib PRIVATE "include")
+
+
+target_include_directories(SpineSkeletonDataConverterLib PRIVATE "include")
