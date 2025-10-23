@@ -224,28 +224,6 @@ void PerformCrossVersionCast(SpineVersion inputVersion, SpineVersion outputVersi
         }
 }
 
-SpineVersion parseVersionString(const std::string& versionStr) {
-    // 强制要求完整的三段式版本号 (x.y.z)
-    std::regex versionRegex(R"(^(\d+)\.(\d+)\.(\d+)$)");
-    std::smatch match;
-    
-    if (std::regex_match(versionStr, match, versionRegex)) {
-        std::string majorVersion = match[1].str();
-        std::string minorVersion = match[2].str();
-        std::string majorMinor = majorVersion + "." + minorVersion;
-        
-        if (majorMinor == "3.5") return SpineVersion::Version35;
-        else if (majorMinor == "3.6") return SpineVersion::Version36;
-        else if (majorMinor == "3.7") return SpineVersion::Version37;
-        else if (majorMinor == "3.8") return SpineVersion::Version38;
-        else if (majorMinor == "4.0") return SpineVersion::Version40;
-        else if (majorMinor == "4.1") return SpineVersion::Version41;
-        else if (majorMinor == "4.2") return SpineVersion::Version42;
-    }
-    
-    return SpineVersion::Invalid;
-}
-
 bool convertFile(const std::string& inputFile, const std::string& outputFile, 
                 FileFormat inputFormat, FileFormat outputFormat, 
                 SpineVersion inputVersion, SpineVersion outputVersion, 
@@ -658,7 +636,7 @@ extern "C"
         //Hard coded.
         skelData.version = "4.2.34";
             
-        PerformCrossVersionCast(srcVersion, (SpineVersion)dstVersion, skelData);
+        PerformCrossVersionCast(srcVersion, (SpineVersion)dstVersion, skelData, false);
 
         constexpr static FileFormat outputFormat = FileFormat::Skel;
         std::vector<unsigned char> dst;
