@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
+
+cmake_policy(SET CMP0091 NEW)     
 project(SpineSkeletonDataConverter)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
+endif()
 
 # Add spine-c/spine-cpp for syntax prompting. These won't be linked to the final executable.
 # Comment out if you don't need syntax prompting.
@@ -87,3 +93,25 @@ target_include_directories(SpineSkeletonDataConverterLib PRIVATE "include")
 
 
 target_include_directories(SpineSkeletonDataConverterLib PRIVATE "include")
+
+if (MSVC)
+    # 切到静态运行库（/MT|/MTd）
+    set_property(TARGET SpineSkeletonDataConverterLib PROPERTY
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
+
+    # 可选：确保编译/链接特性
+    #target_compile_definitions(SpineSkeletonDataConverterLib
+    #        PRIVATE $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:Release>:NDEBUG>)
+endif ()
+
+if (MINGW)
+#    target_link_options(SpineSkeletonDataConverterLib PRIVATE
+#            -Wl,-Bstatic -lwinpthread
+#    ) 
+
+#    target_link_options(SpineSkeletonDataConverterLib PRIVATE
+#            -static-libstdc++
+#            -static-libgcc
+#    )
+endif ()

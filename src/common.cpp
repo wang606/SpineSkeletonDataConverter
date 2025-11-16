@@ -1,4 +1,5 @@
 #include "SkeletonData.h"
+#include <sstream>
 
 // json reader
 

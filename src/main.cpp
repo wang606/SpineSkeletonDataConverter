@@ -7,7 +7,13 @@
 
 #include "SkeletonData.h"
 
+
+#if defined(_WIN32) || defined(_WIN64)
 #define CONVERTER_API __declspec(dllexport) __cdecl
+#else
+// Android / Linux / etc.
+#define CONVERTER_API __attribute__((visibility("default")))
+#endif
 
 enum class SpineVersion {
     Version35 = 0,
@@ -566,14 +572,14 @@ int main(int argc, char* argv[]) {
 
 SpineVersion detectSpineVersion(const uint8_t* buffer, size_t len) {
     try {
-        if (len < 256)
+        if (len < 64)
             return SpineVersion::Invalid;
         
         constexpr size_t headerSize = 256;
-        std::string data((const char*)buffer, headerSize);
+        std::string data((const char*)buffer, std::min(headerSize, len));
         
         // Use regex to find version pattern x.x.x
-        std::regex versionRegex(R"((\d+)\.(\d+)\.(\d+))");
+        std::regex versionRegex(R"((\d+)\.(\d+)(\.(\d+))?)");
         std::smatch match;
         
         if (std::regex_search(data, match, versionRegex)) {
@@ -595,6 +601,8 @@ SpineVersion detectSpineVersion(const uint8_t* buffer, size_t len) {
                 return SpineVersion::Version41;
             } else if (majorMinor == "4.2") {
                 return SpineVersion::Version42;
+            } else if (majorMinor == "3.8965") {
+                return SpineVersion::Version38;
             }
         }
     }
@@ -606,6 +614,26 @@ SpineVersion detectSpineVersion(const uint8_t* buffer, size_t len) {
 
 extern "C"
 {
+     int CONVERTER_API CastJsonSkeletonToBinary(const char* str, uint8_t** outPtr, int* outLen) {
+         // Read data using input version
+         try {
+             Json jsonData = Json::parse(str);
+             SkeletonData skelData = spine42::readJsonData(jsonData);
+             auto outputData = spine42::writeBinaryData(skelData);
+         
+             std::vector<unsigned char> dst;
+             dst.insert(dst.begin(), outputData.begin(), outputData.end());
+         
+             void* dstBuffer = new uint8_t[dst.size()];
+             memcpy(dstBuffer, &dst.front(), dst.size());
+             *outLen = dst.size();
+             *outPtr = static_cast<unsigned char*>(dstBuffer);
+            return 0;
+         }
+         catch (...) {
+             return 1;
+         }
+     }
 
      int CONVERTER_API CastSkeletonDataToDstVersion(
         const uint8_t* inBuf, int inLen, int dstVersion,
