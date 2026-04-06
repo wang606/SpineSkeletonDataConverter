@@ -552,6 +552,26 @@ Binary writeBinaryData(SkeletonData& skeletonData) {
     for (const EventData& event : skeletonData.events) {
         strings.insert(event.name);
     }
+    // Collect attachment names referenced in animations
+    for (const Animation& animation : skeletonData.animations) {
+        // Collect attachment names from slot attachment timelines
+        for (const auto& [slotName, multiTimeline] : animation.slots) {
+            if (multiTimeline.contains("attachment")) {
+                const auto& timeline = multiTimeline.at("attachment");
+                for (const auto& frame : timeline) {
+                    if (frame.str1) strings.insert(frame.str1.value());
+                }
+            }
+        }
+        // Collect attachment names from deform/sequence animations
+        for (const auto& [skinName, skinMap] : animation.attachments) {
+            for (const auto& [slotName, slotMap] : skinMap) {
+                for (const auto& [attachmentName, multiTimeline] : slotMap) {
+                    strings.insert(attachmentName);
+                }
+            }
+        }
+    }
     writeVarint(binary, strings.size(), true);
     skeletonData.strings.clear();
     for (const std::string& str : strings) {
