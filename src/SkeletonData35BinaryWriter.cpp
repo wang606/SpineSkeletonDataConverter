@@ -196,7 +196,12 @@ void writeAnimation(Binary& binary, const Animation& animation, const SkeletonDa
             }
         }
         writeVarint(binary, slotIndex, true);
-        writeVarint(binary, multiTimeline.size(), true);
+        int timelineCount = 0;
+        for (const auto& [timelineName, timeline] : multiTimeline) {
+            SlotTimelineType timelineType = slotTimelineTypeMap.at(timelineName);
+            if (timelineType != SlotTimelineType::SLOT_ALPHA) timelineCount++;
+        }
+        writeVarint(binary, timelineCount, true);
         for (const auto& [timelineName, timeline] : multiTimeline) {
             SlotTimelineType timelineType = slotTimelineTypeMap.at(timelineName);
             if (timelineType == SlotTimelineType::SLOT_ALPHA) continue;
