@@ -230,6 +230,8 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         }
         if (belowOrEqualVersion(inputVersion, SpineVersion::Version38) &&
             aboveOrEqualVersion(outputVersion, SpineVersion::Version40)) {
+            std::cout << "Converting Spine 3.x rotate timelines to 4.x-compatible absolute angles...\n";
+            normalizeRotateTimeline3xTo4x(skelData);
             if (removeCurveOption) {
                 std::cout << "Converting from 3.x to 4.x with --remove-curve, stripping curves...\n";
                 removeCurve(skelData);

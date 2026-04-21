@@ -1,4 +1,5 @@
 #include "SkeletonData.h"
+#include <cmath>
 
 enum class CurveYType {
     R1, G1, B1, A1, R2, G2, B2, V1, V2, V3, V4, V5, V6, ZeroOne
@@ -11,6 +12,34 @@ const static std::vector<size_t> CurveYTypeBezierIndex = {
 struct BezierCurve {
     float cx1, cy1, cx2, cy2, x1, y1, x2, y2; 
 }; 
+
+float normalizeRotationDelta(float delta) {
+    delta = std::fmod(delta, 360.0f);
+    if (delta > 180.0f) delta -= 360.0f;
+    if (delta < -180.0f) delta += 360.0f;
+    return delta;
+}
+
+float resolveAmbiguousHalfTurn(float delta, float previousDelta) {
+    if (std::fabs(std::fabs(delta) - 180.0f) > 0.0001f) return delta;
+    if (previousDelta > 0.0f) return 180.0f;
+    if (previousDelta < 0.0f) return -180.0f;
+    return 180.0f;
+}
+
+void normalizeRotateTimeline3xTo4x(Timeline &timeline) {
+    if (timeline.size() < 2) return;
+
+    float unwrappedValue = timeline[0].value1;
+    float previousDelta = 0.0f;
+    for (size_t i = 1; i < timeline.size(); ++i) {
+        float delta = normalizeRotationDelta(timeline[i].value1 - timeline[i - 1].value1);
+        delta = resolveAmbiguousHalfTurn(delta, previousDelta);
+        unwrappedValue += delta;
+        timeline[i].value1 = unwrappedValue;
+        if (std::fabs(delta) > 0.0001f) previousDelta = delta;
+    }
+}
 
 void convertBezierCurve3xTo4x(BezierCurve& bezier) {
     float timeRange = bezier.x2 - bezier.x1;
@@ -155,6 +184,17 @@ void convertCurve3xTo4x(SkeletonData& skeleton) {
                     for (auto& [timelineType, timeline] : multiTimeline)
                         if (timelineType == "deform")
                             convertTimelineCurve3xTo4x(timeline, { CurveYType::ZeroOne });
+    }
+}
+
+void normalizeRotateTimeline3xTo4x(SkeletonData& skeleton) {
+    for (auto& animation : skeleton.animations) {
+        for (auto& [boneName, multiTimeline] : animation.bones) {
+            auto it = multiTimeline.find("rotate");
+            if (it != multiTimeline.end()) {
+                normalizeRotateTimeline3xTo4x(it->second);
+            }
+        }
     }
 }
 
