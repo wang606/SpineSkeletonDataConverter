@@ -1,3 +1,9 @@
 .vscode
-build
+build/
 test_examples
+CMakeFiles/
+lib/
+*.cmake
+bin/
+CMakeCache.txt
+Makefile

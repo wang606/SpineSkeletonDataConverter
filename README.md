@@ -34,7 +34,7 @@ cd SpineSkeletonDataConverter
 mkdir build && cd build
 
 # Configure and build
-cmake ..
+cmake .
 cmake --build . --config Release
 ```
 

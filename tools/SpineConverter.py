@@ -9,17 +9,40 @@ def format_command(command: list[str]) -> str:
 
 
 def locate_executable(name: str) -> Path:
+	# Search from tools/ up to project root
 	script_dir = Path(__file__).resolve().parent
-	direct_candidate = script_dir / name
-	if direct_candidate.exists():
-		return direct_candidate
+	project_root = script_dir.parent.parent  # tools/ -> project root
 
-	for candidate in script_dir.rglob(name):
-		if candidate.is_file():
-			return candidate
+	# Detect platform
+	is_windows = sys.platform == "win32"
+	windows_name = f"{name}.exe"
+
+	# Platform-specific search order
+	# Windows: name.exe -> name
+	# macOS/Linux: name -> name.exe
+	if is_windows:
+		search_order = [windows_name, name]
+	else:
+		search_order = [name, windows_name]
+
+	# Search locations: tools/, project root bin/
+	search_dirs = [script_dir,  project_root / "bin"]
+
+	# Check direct candidate in each directory
+	for search_dir in search_dirs:
+		for candidate_name in search_order:
+			direct_candidate = search_dir / candidate_name
+			if direct_candidate.exists():
+				return direct_candidate
+
+	# Recursive search in project root
+	for candidate_name in search_order:
+		for candidate in project_root.rglob(candidate_name):
+			if candidate.is_file():
+				return candidate
 
 	raise FileNotFoundError(
-		f"Could not locate {name} under {script_dir}. Ensure the executable is placed alongside this script."
+		f"Could not locate {name} under {project_root}. Ensure the executable is built and placed in the project root or build/ directory."
 	)
 
 
@@ -62,8 +85,8 @@ def process_files(args: argparse.Namespace) -> None:
 
 	output_dir.mkdir(parents=True, exist_ok=True)
 
-	converter_exe = locate_executable("SpineSkeletonDataConverter.exe")
-	atlas_exe = locate_executable("SpineAtlasDowngrade.exe")
+	converter_exe = locate_executable("SpineSkeletonDataConverter")
+	atlas_exe = locate_executable("SpineAtlasDowngrade")
 
 	for path in input_dir.rglob("*"):
 		if not path.is_file():
