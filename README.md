@@ -1,5 +1,7 @@
 # Spine Skeleton Data Converter
 
+[![oosmetrics](https://api.oosmetrics.com/api/v1/badge/achievement/de213588-2f28-4fe1-9c30-07d12caeb572.svg)](https://oosmetrics.com/repo/wang606/SpineSkeletonDataConverter)
+
 A powerful command-line tool for converting Spine skeleton data between different formats and different versions, with automatic version detection and support for multiple Spine runtime versions.
 
 ## ✨ Features
