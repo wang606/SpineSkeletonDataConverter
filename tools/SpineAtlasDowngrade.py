@@ -178,16 +178,19 @@ def read_atlas_data_4x(content: str) -> AtlasData:
     
     return atlas_data
 
-def write_atlas_data_3x(atlas_data: AtlasData) -> str:
+def write_atlas_data_3x(atlas_data: AtlasData, ignore_scale: bool = False) -> str:
     """Generates a 3.x compatible atlas string from an AtlasData object."""
     output_lines = []
     
     for page in atlas_data.pages:
         output_lines.append(page.name)
         
-        # Apply scale to page size
-        width = int(page.width / page.scale) if page.scale != 1.0 else page.width
-        height = int(page.height / page.scale) if page.scale != 1.0 else page.height
+        # Apply scale to page size (unless ignored)
+        if ignore_scale or page.scale == 1.0:
+            width, height = page.width, page.height
+        else:
+            width = int(page.width / page.scale)
+            height = int(page.height / page.scale)
         output_lines.append(f"size: {width}, {height}")
         
         output_lines.append(f"format: {page.format}")
@@ -205,8 +208,8 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
             else:
                 output_lines.append(f"  rotate: {region.degrees}")
             
-            # Apply scale to all region metrics
-            scale = page.scale
+            # Apply scale to all region metrics (unless ignored)
+            scale = page.scale if not ignore_scale else 1.0
             x = int(region.x / scale) if scale != 1.0 else region.x
             y = int(region.y / scale) if scale != 1.0 else region.y
             output_lines.append(f"  xy: {x}, {y}")
@@ -246,7 +249,7 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
 # Image Scaling
 # ============================================================================
 
-def scale_png_images(atlas_data: AtlasData, atlas_dir: Path, output_dir: Path):
+def scale_png_images(atlas_data: AtlasData, atlas_dir: Path, output_dir: Path, ignore_scale: bool = False):
     """Scales PNG texture images based on the scale property in the atlas data."""
     print("Processing PNG images:")
     for page in atlas_data.pages:
@@ -258,9 +261,10 @@ def scale_png_images(atlas_data: AtlasData, atlas_dir: Path, output_dir: Path):
             print(f"  ✗ PNG file not found: {input_path}")
             continue
         
-        if page.scale == 1.0:
+        if ignore_scale or page.scale == 1.0:
             shutil.copy2(input_path, output_path)
-            print(f"  ✓ Copied {png_name} (scale=1.0, no scaling needed)")
+            mode_desc = " (scale ignored)" if ignore_scale else " (scale=1.0, no scaling needed)"
+            print(f"  ✓ Copied {png_name}{mode_desc}")
         else:
             try:
                 with Image.open(input_path) as img:
@@ -281,6 +285,8 @@ def main():
     parser = argparse.ArgumentParser(description='Convert Spine 4.x atlas to 3.x format.')
     parser.add_argument('input_atlas', help='Input 4.x atlas file')
     parser.add_argument('output_dir', help='Output directory for converted files')
+    parser.add_argument('--ignore-scale', action='store_true',
+                        help='Ignore scale property: copy images without resizing and keep original coordinates. ')
     
     args = parser.parse_args()
     
@@ -295,6 +301,8 @@ def main():
     
     print(f"Converting Spine 4.x atlas: {input_path.name}")
     print(f"Output directory: {output_dir}")
+    if args.ignore_scale:
+        print("Mode: IGNORE SCALE (images will be copied, coordinates kept as-is)")
     print("-" * 50)
     
     # Read 4.x atlas content
@@ -305,7 +313,7 @@ def main():
     atlas_data = read_atlas_data_4x(atlas_4x_content)
     
     # Generate 3.x atlas content
-    atlas_3x_content = write_atlas_data_3x(atlas_data)
+    atlas_3x_content = write_atlas_data_3x(atlas_data, ignore_scale=args.ignore_scale)
     
     # Save the converted atlas file
     output_atlas_path = output_dir / input_path.name
@@ -315,7 +323,7 @@ def main():
     
     # Scale the associated PNG images
     atlas_dir = input_path.parent
-    scale_png_images(atlas_data, atlas_dir, output_dir)
+    scale_png_images(atlas_data, atlas_dir, output_dir, ignore_scale=args.ignore_scale)
     
     print("-" * 50)
     print("✓ Atlas downgrade completed successfully!")
