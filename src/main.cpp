@@ -127,26 +127,68 @@ void applyAtlasScale(SkeletonData& data, double scale) {
 
     float scaleF = static_cast<float>(scale);
 
+    // 缩放骨骼位置（x/y 和 length）
+    for (auto& bone : data.bones) {
+        bone.x *= scaleF;
+        bone.y *= scaleF;
+        bone.length *= scaleF;
+    }
+
     for (auto& skin : data.skins) {
         for (auto& [slotName, attachments] : skin.attachments) {
             for (auto& [attachName, attachment] : attachments) {
                 switch (attachment.type) {
                 case AttachmentType_Region: {
                     auto& region = std::get<RegionAttachment>(attachment.data);
-                    region.scaleX *= scaleF;
-                    region.scaleY *= scaleF;
+                    region.x *= scaleF;
+                    region.y *= scaleF;
+                    region.width *= scaleF;
+                    region.height *= scaleF;
                     break;
                 }
                 case AttachmentType_Mesh: {
                     auto& mesh = std::get<MeshAttachment>(attachment.data);
                     mesh.width *= scaleF;
                     mesh.height *= scaleF;
+                    for (size_t i = 0; i < mesh.vertices.size(); i++) {
+                        mesh.vertices[i] *= scaleF;
+                    }
                     break;
                 }
                 case AttachmentType_Linkedmesh: {
                     auto& linkedMesh = std::get<LinkedmeshAttachment>(attachment.data);
                     linkedMesh.width *= scaleF;
                     linkedMesh.height *= scaleF;
+                    break;
+                }
+                case AttachmentType_Boundingbox: {
+                    auto& bbox = std::get<BoundingboxAttachment>(attachment.data);
+                    for (size_t i = 0; i < bbox.vertices.size(); i++) {
+                        bbox.vertices[i] *= scaleF;
+                    }
+                    break;
+                }
+                case AttachmentType_Path: {
+                    auto& path = std::get<PathAttachment>(attachment.data);
+                    for (size_t i = 0; i < path.vertices.size(); i++) {
+                        path.vertices[i] *= scaleF;
+                    }
+                    for (size_t i = 0; i < path.lengths.size(); i++) {
+                        path.lengths[i] *= scaleF;
+                    }
+                    break;
+                }
+                case AttachmentType_Clipping: {
+                    auto& clipping = std::get<ClippingAttachment>(attachment.data);
+                    for (size_t i = 0; i < clipping.vertices.size(); i++) {
+                        clipping.vertices[i] *= scaleF;
+                    }
+                    break;
+                }
+                case AttachmentType_Point: {
+                    auto& point = std::get<PointAttachment>(attachment.data);
+                    point.x *= scaleF;
+                    point.y *= scaleF;
                     break;
                 }
                 default:
