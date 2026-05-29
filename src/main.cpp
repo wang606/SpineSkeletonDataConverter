@@ -126,12 +126,21 @@ void applyAtlasScale(SkeletonData& data, double scale) {
     if (std::abs(scale - 1.0) < 1e-9) return;
 
     float scaleF = static_cast<float>(scale);
+    float invScaleF = 1.0f / scaleF;  // 反向缩放因子，用于根骨骼和整体尺寸
 
     // 缩放骨骼位置（x/y 和 length）
     for (auto& bone : data.bones) {
         bone.x *= scaleF;
         bone.y *= scaleF;
         bone.length *= scaleF;
+    }
+
+    // 根骨骼（没有父骨骼的骨骼）应用反向缩放，整体放大恢复到设计尺寸
+    for (auto& bone : data.bones) {
+        if (!bone.parent.has_value()) {
+            bone.scaleX *= invScaleF;
+            bone.scaleY *= invScaleF;
+        }
     }
 
     for (auto& skin : data.skins) {
@@ -198,8 +207,9 @@ void applyAtlasScale(SkeletonData& data, double scale) {
         }
     }
 
-    data.width *= scaleF;
-    data.height *= scaleF;
+    // Skeleton 整体尺寸恢复到设计尺寸（反向缩放）
+    data.width *= invScaleF;
+    data.height *= invScaleF;
 }
 
 bool convertFile(const std::string& inputFile, const std::string& outputFile, 
