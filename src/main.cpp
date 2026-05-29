@@ -33,6 +33,7 @@ struct ConversionOptions {
     std::string outputVersionString; // 完整的版本号字符串，如 "4.2.11"
     bool help = false;
     bool removeCurve = false;
+    double atlasScale = 1.0; // Atlas scale 因子，用于将 atlas 的缩放转移到 skel 数据中
 };
 
 bool aboveOrEqualVersion(SpineVersion version, SpineVersion target) {
@@ -121,11 +122,50 @@ SpineVersion parseVersionString(const std::string& versionStr) {
     return SpineVersion::Invalid;
 }
 
+void applyAtlasScale(SkeletonData& data, double scale) {
+    if (std::abs(scale - 1.0) < 1e-9) return;
+
+    float scaleF = static_cast<float>(scale);
+
+    for (auto& skin : data.skins) {
+        for (auto& [slotName, attachments] : skin.attachments) {
+            for (auto& [attachName, attachment] : attachments) {
+                switch (attachment.type) {
+                case AttachmentType_Region: {
+                    auto& region = std::get<RegionAttachment>(attachment.data);
+                    region.scaleX *= scaleF;
+                    region.scaleY *= scaleF;
+                    break;
+                }
+                case AttachmentType_Mesh: {
+                    auto& mesh = std::get<MeshAttachment>(attachment.data);
+                    mesh.width *= scaleF;
+                    mesh.height *= scaleF;
+                    break;
+                }
+                case AttachmentType_Linkedmesh: {
+                    auto& linkedMesh = std::get<LinkedmeshAttachment>(attachment.data);
+                    linkedMesh.width *= scaleF;
+                    linkedMesh.height *= scaleF;
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    data.width *= scaleF;
+    data.height *= scaleF;
+}
+
 bool convertFile(const std::string& inputFile, const std::string& outputFile, 
                 FileFormat inputFormat, FileFormat outputFormat, 
                 SpineVersion inputVersion, SpineVersion outputVersion, 
                 const std::string& outputVersionString,
-                bool removeCurveOption) {
+                bool removeCurveOption,
+                double atlasScale) {
     
     try {
         // Read input file
@@ -244,6 +284,13 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
             belowOrEqualVersion(outputVersion, SpineVersion::Version41)) {
             std::cout << "Converting from 4.2 to below 4.2, adjusting constraint order...\n"; 
             convertOrder42ToBelow(skelData);
+        }
+        
+        // 应用 Atlas scale 因子到 skel 数据
+        if (std::abs(atlasScale - 1.0) >= 1e-9) {
+            std::cout << "Applying atlas scale factor " << atlasScale << " to skeleton data...\n";
+            applyAtlasScale(skelData, atlasScale);
+            std::cout << "NOTE: Please use original atlas images WITHOUT scaling.\n";
         }
         
         // Write data using output version
@@ -407,9 +454,10 @@ void printUsage(const char* programName) {
     std::cout << "  .json       Spine JSON format\n";
     std::cout << "  .skel       Spine binary (SKEL) format\n\n";
     std::cout << "Options:\n";
-    std::cout << "  -v          Output version (must be complete: x.y.z format)\n";
-    std::cout << "  --remove-curve  Strip animation curves instead of converting between formats\n";
-    std::cout << "  --help      Show this help message\n\n";
+    std::cout << "  -v                 Output version (must be complete: x.y.z format)\n";
+    std::cout << "  --remove-curve     Strip animation curves instead of converting between formats\n";
+    std::cout << "  --atlas-scale <v>  Apply atlas scale factor to skel data (avoids image resizing precision loss)\n";
+    std::cout << "  --help             Show this help message\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName << " input.skel output.json\n";
     std::cout << "  " << programName << " input.json output.skel\n";
@@ -479,6 +527,22 @@ ConversionOptions parseArguments(int argc, char* argv[]) {
             options.help = true;
         } else if (arg == "--remove-curve") {
             options.removeCurve = true;
+        } else if (arg == "--atlas-scale") {
+            if (i + 1 < argc) {
+                try {
+                    options.atlasScale = std::stod(argv[++i]);
+                    if (options.atlasScale <= 0.0) {
+                        std::cerr << "Error: --atlas-scale must be positive\n";
+                        options.help = true;
+                    }
+                } catch (...) {
+                    std::cerr << "Error: Invalid value for --atlas-scale\n";
+                    options.help = true;
+                }
+            } else {
+                std::cerr << "Error: --atlas-scale requires a numeric argument\n";
+                options.help = true;
+            }
         } else {
             std::cerr << "Warning: Unknown option: " << arg << "\n";
         }
@@ -531,7 +595,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Converting from " << (options.inputFormat == FileFormat::Json ? "JSON" : "SKEL") 
                   << " to " << (options.outputFormat == FileFormat::Json ? "JSON" : "SKEL") << "...\n";
         
-        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString, options.removeCurve)) {
+        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString, options.removeCurve, options.atlasScale)) {
             std::cout << "Conversion completed successfully!\n";
             std::cout << "Output file: " << options.outputFile << "\n";
             return 0;
