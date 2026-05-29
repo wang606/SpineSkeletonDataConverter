@@ -126,17 +126,19 @@ void applyAtlasScale(SkeletonData& data, double scale) {
     if (std::abs(scale - 1.0) < 1e-9) return;
 
     float scaleF = static_cast<float>(scale);
-    float invScaleF = 1.0f / scaleF;  // 反向缩放因子，用于根骨骼和整体尺寸
+    float invScaleF = 1.0f / scaleF;
 
-    // 缩放骨骼位置（x/y 和 length）
-    for (auto& bone : data.bones) {
+    // 缩放骨骼位置
+    for (size_t i = 0; i < data.bones.size(); i++) {
+        auto& bone = data.bones[i];
         bone.x *= scaleF;
         bone.y *= scaleF;
         bone.length *= scaleF;
     }
 
-    // 根骨骼（没有父骨骼的骨骼）应用反向缩放，整体放大恢复到设计尺寸
-    for (auto& bone : data.bones) {
+    // 根骨骼反向缩放
+    for (size_t i = 0; i < data.bones.size(); i++) {
+        auto& bone = data.bones[i];
         if (!bone.parent.has_value()) {
             bone.scaleX *= invScaleF;
             bone.scaleY *= invScaleF;
@@ -159,8 +161,19 @@ void applyAtlasScale(SkeletonData& data, double scale) {
                     auto& mesh = std::get<MeshAttachment>(attachment.data);
                     mesh.width *= scaleF;
                     mesh.height *= scaleF;
-                    for (size_t i = 0; i < mesh.vertices.size(); i++) {
-                        mesh.vertices[i] *= scaleF;
+                    // Mesh vertices 格式：
+                    // 如果是加权网格：[boneCount, boneIdx, weight, x, y, ...] 循环
+                    // 只缩放 x, y 坐标，不缩放 boneCount, boneIdx, weight
+                    size_t i = 0;
+                    while (i < mesh.vertices.size()) {
+                        int boneCount = static_cast<int>(mesh.vertices[i]); // 不缩放
+                        i++; // 跳过 boneCount
+                        for (int j = 0; j < boneCount && i < mesh.vertices.size(); j++) {
+                            i++; // 跳过 bone index（不缩放）
+                            i++; // 跳过 weight（不缩放）
+                            if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // x 坐标
+                            if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // y 坐标
+                        }
                     }
                     break;
                 }
@@ -172,25 +185,33 @@ void applyAtlasScale(SkeletonData& data, double scale) {
                 }
                 case AttachmentType_Boundingbox: {
                     auto& bbox = std::get<BoundingboxAttachment>(attachment.data);
-                    for (size_t i = 0; i < bbox.vertices.size(); i++) {
-                        bbox.vertices[i] *= scaleF;
+                    if (!bbox.vertices.empty()) {
+                        for (size_t i = 0; i < bbox.vertices.size(); i++) {
+                            bbox.vertices[i] *= scaleF;
+                        }
                     }
                     break;
                 }
                 case AttachmentType_Path: {
                     auto& path = std::get<PathAttachment>(attachment.data);
-                    for (size_t i = 0; i < path.vertices.size(); i++) {
-                        path.vertices[i] *= scaleF;
+                    if (!path.vertices.empty()) {
+                        for (size_t i = 0; i < path.vertices.size(); i++) {
+                            path.vertices[i] *= scaleF;
+                        }
                     }
-                    for (size_t i = 0; i < path.lengths.size(); i++) {
-                        path.lengths[i] *= scaleF;
+                    if (!path.lengths.empty()) {
+                        for (size_t i = 0; i < path.lengths.size(); i++) {
+                            path.lengths[i] *= scaleF;
+                        }
                     }
                     break;
                 }
                 case AttachmentType_Clipping: {
                     auto& clipping = std::get<ClippingAttachment>(attachment.data);
-                    for (size_t i = 0; i < clipping.vertices.size(); i++) {
-                        clipping.vertices[i] *= scaleF;
+                    if (!clipping.vertices.empty()) {
+                        for (size_t i = 0; i < clipping.vertices.size(); i++) {
+                            clipping.vertices[i] *= scaleF;
+                        }
                     }
                     break;
                 }
