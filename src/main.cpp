@@ -161,18 +161,26 @@ void applyAtlasScale(SkeletonData& data, double scale) {
                     auto& mesh = std::get<MeshAttachment>(attachment.data);
                     mesh.width *= scaleF;
                     mesh.height *= scaleF;
-                    // Mesh vertices 格式：
-                    // 如果是加权网格：[boneCount, boneIdx, weight, x, y, ...] 循环
-                    // 只缩放 x, y 坐标，不缩放 boneCount, boneIdx, weight
-                    size_t i = 0;
-                    while (i < mesh.vertices.size()) {
-                        int boneCount = static_cast<int>(mesh.vertices[i]); // 不缩放
-                        i++; // 跳过 boneCount
-                        for (int j = 0; j < boneCount && i < mesh.vertices.size(); j++) {
-                            i++; // 跳过 bone index（不缩放）
-                            i++; // 跳过 weight（不缩放）
-                            if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // x 坐标
-                            if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // y 坐标
+                    // 判断是否加权网格：vertices.size() > uvs.size() 表示加权
+                    bool weighted = mesh.vertices.size() > mesh.uvs.size();
+                    if (weighted) {
+                        // 加权网格：[boneCount, boneIdx, weight, x, y, ...] 循环
+                        // 只缩放 x, y 坐标
+                        size_t i = 0;
+                        while (i < mesh.vertices.size()) {
+                            int boneCount = static_cast<int>(mesh.vertices[i]);
+                            i++;
+                            for (int j = 0; j < boneCount && i < mesh.vertices.size(); j++) {
+                                i++; // bone index
+                                i++; // weight
+                                if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // x
+                                if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // y
+                            }
+                        }
+                    } else {
+                        // 非加权网格：[x, y, x, y, ...] 直接缩放所有坐标
+                        for (size_t i = 0; i < mesh.vertices.size(); i++) {
+                            mesh.vertices[i] *= scaleF;
                         }
                     }
                     break;
