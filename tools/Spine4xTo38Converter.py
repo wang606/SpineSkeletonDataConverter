@@ -8,9 +8,14 @@ This tool implements 3 main tasks:
 2. Convert 4.x atlas to 3.8 format and extract page->scale mapping
 3. Scale PNG images according to the scale mapping
 
+Modes:
+  - Default: Scale PNG images, apply scale to atlas coordinates (integer, lossy)
+  - --lossless: Keep original PNG, apply scale to skel float data (lossless)
+
 Usage:
     python Spine4xTo38Converter.py input.skel output_dir --converter path/to/SpineSkeletonDataConverter.exe
     python Spine4xTo38Converter.py input.json output_dir --converter path/to/SpineSkeletonDataConverter.exe
+    python Spine4xTo38Converter.py input.skel output_dir --converter path/to/SpineSkeletonDataConverter.exe --lossless
 """
 
 import os
@@ -27,7 +32,7 @@ from PIL import Image
 # Task 1: Skeleton Data Conversion
 # ============================================================================
 
-def convert_skeleton_data(input_file: str, output_file: str, converter_path: str) -> bool:
+def convert_skeleton_data(input_file: str, output_file: str, converter_path: str, atlas_scale: float = 1.0) -> bool:
     """任务1：使用SpineSkeletonDataConverter转换skeleton数据"""
     try:
         cmd = [
@@ -36,6 +41,8 @@ def convert_skeleton_data(input_file: str, output_file: str, converter_path: str
             output_file,
             '-v', '3.8.75'
         ]
+        if atlas_scale != 1.0:
+            cmd.extend(['--atlas-scale', str(atlas_scale)])
         
         print(f"Converting skeleton: {os.path.basename(input_file)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -221,17 +228,22 @@ def read_atlas_data_4x(content: str) -> AtlasData:
     return atlas_data
 
 
-def write_atlas_data_38(atlas_data: AtlasData) -> str:
-    """子任务2.2：写入3.8格式atlas，应用scale到各个数值"""
+def write_atlas_data_38(atlas_data: AtlasData, ignore_scale: bool = False) -> str:
+    """子任务2.2：写入3.8格式atlas
+    
+    Args:
+        atlas_data: Atlas数据对象
+        ignore_scale: True时保持原始坐标不变（仅移除scale参数），False时应用scale到坐标
+    """
     output_lines = []
     
     for page in atlas_data.pages:
-        # 页面名称
         output_lines.append(page.name)
         
-        # size (必需) - 应用scale
-        width = int(page.width / page.scale) if page.scale != 1.0 else page.width
-        height = int(page.height / page.scale) if page.scale != 1.0 else page.height
+        scale = page.scale if not ignore_scale else 1.0
+        
+        width = int(page.width / scale) if scale != 1.0 else page.width
+        height = int(page.height / scale) if scale != 1.0 else page.height
         output_lines.append(f"size: {width}, {height}")
         
         # format (必需)
@@ -257,42 +269,36 @@ def write_atlas_data_38(atlas_data: AtlasData) -> str:
                 output_lines.append(f"  rotate: {region.degrees}")
             
             # xy (必需) - 应用scale
-            x = int(region.x / page.scale) if page.scale != 1.0 else region.x
-            y = int(region.y / page.scale) if page.scale != 1.0 else region.y
+            x = int(region.x / scale) if scale != 1.0 else region.x
+            y = int(region.y / scale) if scale != 1.0 else region.y
             output_lines.append(f"  xy: {x}, {y}")
             
             # size (必需) - 应用scale
-            width = int(region.width / page.scale) if page.scale != 1.0 else region.width
-            height = int(region.height / page.scale) if page.scale != 1.0 else region.height
-            output_lines.append(f"  size: {width}, {height}")
+            r_width = int(region.width / scale) if scale != 1.0 else region.width
+            r_height = int(region.height / scale) if scale != 1.0 else region.height
+            output_lines.append(f"  size: {r_width}, {r_height}")
             
             # split (可选，仅当存在时) - 应用scale
             if region.splits and len(region.splits) >= 4:
-                if page.scale != 1.0:
-                    splits = [str(int(s / page.scale)) for s in region.splits[:4]]
-                else:
-                    splits = [str(s) for s in region.splits[:4]]
+                splits = [str(int(s / scale)) if scale != 1.0 else str(s) for s in region.splits[:4]]
                 output_lines.append(f"  split: {', '.join(splits)}")
             
             # pad (可选，仅当存在split时) - 应用scale
             if region.pads and len(region.pads) >= 4:
-                if page.scale != 1.0:
-                    pads = [str(int(p / page.scale)) for p in region.pads[:4]]
-                else:
-                    pads = [str(p) for p in region.pads[:4]]
+                pads = [str(int(p / scale)) if scale != 1.0 else str(p) for p in region.pads[:4]]
                 output_lines.append(f"  pad: {', '.join(pads)}")
             
             # orig (必需) - 应用scale
             orig_width = region.original_width if region.original_width > 0 else region.width
             orig_height = region.original_height if region.original_height > 0 else region.height
-            if page.scale != 1.0:
-                orig_width = int(orig_width / page.scale)
-                orig_height = int(orig_height / page.scale)
+            if scale != 1.0:
+                orig_width = int(orig_width / scale)
+                orig_height = int(orig_height / scale)
             output_lines.append(f"  orig: {orig_width}, {orig_height}")
             
             # offset (必需) - 应用scale
-            offset_x = int(region.offset_x / page.scale) if page.scale != 1.0 else region.offset_x
-            offset_y = int(region.offset_y / page.scale) if page.scale != 1.0 else region.offset_y
+            offset_x = int(region.offset_x / scale) if scale != 1.0 else region.offset_x
+            offset_y = int(region.offset_y / scale) if scale != 1.0 else region.offset_y
             output_lines.append(f"  offset: {offset_x}, {offset_y}")
             
             # index (必需)
@@ -323,10 +329,9 @@ def convert_atlas_4x_to_38(atlas_content: str) -> tuple[str, AtlasData]:
 # Task 3: Image Scaling - 使用atlasData中的scale信息
 # ============================================================================
 
-def scale_png_images(atlas_data: AtlasData, atlas_dir: str, output_dir: str):
-    """任务3：根据atlasData中的scale信息缩放PNG图片文件"""
+def scale_png_images(atlas_data: AtlasData, atlas_dir: str, output_dir: str, lossless: bool = False):
+    """任务3：根据atlasData中的scale信息处理PNG图片"""
     for page in atlas_data.pages:
-        # 处理页面名称中可能包含的路径
         png_name = os.path.basename(page.name)
         if png_name.endswith('.png'):
             png_name = png_name[:-4]
@@ -338,10 +343,9 @@ def scale_png_images(atlas_data: AtlasData, atlas_dir: str, output_dir: str):
             print(f"  ✗ PNG file not found: {png_name}.png")
             continue
         
-        if page.scale == 1.0:
-            # 不需要缩放，直接复制
+        if lossless or page.scale == 1.0:
             shutil.copy2(input_path, output_path)
-            print(f"  ✓ Copied {png_name}.png (scale=1.0, no scaling needed)")
+            print(f"  ✓ Copied {png_name}.png (original size)")
         else:
             # 需要缩放
             try:
@@ -351,8 +355,7 @@ def scale_png_images(atlas_data: AtlasData, atlas_dir: str, output_dir: str):
                     
                     scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     scaled_img.save(output_path)
-                    print(f"  ✓ Scaled {png_name}.png: {img.width}x{img.height} → {new_width}x{new_height} (scale={page.scale})")
-                    
+                    print(f"  ✓ Scaled {png_name}.png: {img.width}x{img.height} → {new_width}x{new_height}")
             except Exception as e:
                 print(f"  ✗ Error scaling {png_name}.png: {e}")
 
@@ -380,6 +383,7 @@ def main():
     parser.add_argument('input_file', help='Input skeleton file (.skel or .json)')
     parser.add_argument('output_dir', help='Output directory for converted files')
     parser.add_argument('--converter', required=True, help='Path to SpineSkeletonDataConverter executable')
+    parser.add_argument('--lossless', action='store_true', help='Lossless mode: keep original PNG, apply scale to skel')
     
     args = parser.parse_args()
     
@@ -402,50 +406,47 @@ def main():
     
     print(f"Converting Spine 4.x project: {input_path.name}")
     print(f"Output directory: {args.output_dir}")
+    print(f"Mode: {'lossless' if args.lossless else 'default (scale PNG)'}")
     print("-" * 50)
     
     success = True
     
-    # ============================================================================
-    # 任务1：转换skeleton数据
-    # ============================================================================
-    output_skeleton = os.path.join(args.output_dir, f"{base_name}.json")
-    if not convert_skeleton_data(args.input_file, output_skeleton, args.converter):
-        success = False
-    
-    # ============================================================================
-    # 任务2：转换atlas文件
-    # ============================================================================
     atlas_file = find_atlas_file(args.input_file)
+    atlas_scale = 1.0
+    
     if atlas_file:
         print(f"Found atlas file: {os.path.basename(atlas_file)}")
-        
-        # 读取4.x atlas内容
         with open(atlas_file, 'r', encoding='utf-8') as f:
             atlas_4x_content = f.read()
+        atlas_data = read_atlas_data_4x(atlas_4x_content)
         
-        # 转换到3.8格式并获取atlas数据
-        atlas_38_content, atlas_data = convert_atlas_4x_to_38(atlas_4x_content)
+        if atlas_data.pages:
+            atlas_scale = atlas_data.pages[0].scale
+            print(f"Atlas scale: {atlas_scale}")
         
-        # 保存转换后的atlas文件
-        output_atlas = os.path.join(args.output_dir, f"{base_name}.atlas")
-        with open(output_atlas, 'w', encoding='utf-8') as f:
-            f.write(atlas_38_content)
-        print(f"✓ Atlas conversion successful")
-        
-        # 打印scale信息
-        print(f"Found {len(atlas_data.pages)} pages:")
-        for page in atlas_data.pages:
-            print(f"  {page.name}: scale={page.scale}")
-        
-        # ============================================================================
-        # 任务3：根据atlasData缩放PNG图片
-        # ============================================================================
-        print("Processing PNG images:")
-        scale_png_images(atlas_data, atlas_dir, args.output_dir)
-        
+        if args.lossless:
+            output_atlas = os.path.join(args.output_dir, f"{base_name}.atlas")
+            atlas_38_content = write_atlas_data_38(atlas_data, ignore_scale=True)
+            with open(output_atlas, 'w', encoding='utf-8') as f:
+                f.write(atlas_38_content)
+            print(f"✓ Atlas converted (scale removed, coordinates unchanged)")
+        else:
+            atlas_38_content, _ = convert_atlas_4x_to_38(atlas_4x_content)
+            output_atlas = os.path.join(args.output_dir, f"{base_name}.atlas")
+            with open(output_atlas, 'w', encoding='utf-8') as f:
+                f.write(atlas_38_content)
+            print(f"✓ Atlas converted (scale applied to coordinates)")
     else:
         print("Warning: No atlas file found")
+    
+    output_ext = input_path.suffix
+    output_skeleton = os.path.join(args.output_dir, f"{base_name}{output_ext}")
+    if not convert_skeleton_data(args.input_file, output_skeleton, args.converter, atlas_scale if args.lossless else 1.0):
+        success = False
+    
+    if atlas_file and atlas_data.pages:
+        print("Processing PNG images:")
+        scale_png_images(atlas_data, atlas_dir, args.output_dir, args.lossless)
     
     print("-" * 50)
     if success:
