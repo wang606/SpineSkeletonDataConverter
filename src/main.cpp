@@ -33,6 +33,7 @@ struct ConversionOptions {
     std::string outputVersionString; // 完整的版本号字符串，如 "4.2.11"
     bool help = false;
     bool removeCurve = false;
+    double atlasScale = 1.0; // Atlas scale 因子，用于将 atlas 的缩放转移到 skel 数据中
 };
 
 bool aboveOrEqualVersion(SpineVersion version, SpineVersion target) {
@@ -121,11 +122,131 @@ SpineVersion parseVersionString(const std::string& versionStr) {
     return SpineVersion::Invalid;
 }
 
+void applyAtlasScale(SkeletonData& data, double scale) {
+    if (std::abs(scale - 1.0) < 1e-9) return;
+
+    float scaleF = static_cast<float>(scale);
+    float invScaleF = 1.0f / scaleF;
+
+    // 缩放骨骼位置
+    for (size_t i = 0; i < data.bones.size(); i++) {
+        auto& bone = data.bones[i];
+        bone.x *= scaleF;
+        bone.y *= scaleF;
+        bone.length *= scaleF;
+    }
+
+    // 根骨骼反向缩放
+    for (size_t i = 0; i < data.bones.size(); i++) {
+        auto& bone = data.bones[i];
+        if (!bone.parent.has_value()) {
+            bone.scaleX *= invScaleF;
+            bone.scaleY *= invScaleF;
+        }
+    }
+
+    for (auto& skin : data.skins) {
+        for (auto& [slotName, attachments] : skin.attachments) {
+            for (auto& [attachName, attachment] : attachments) {
+                switch (attachment.type) {
+                case AttachmentType_Region: {
+                    auto& region = std::get<RegionAttachment>(attachment.data);
+                    region.x *= scaleF;
+                    region.y *= scaleF;
+                    region.width *= scaleF;
+                    region.height *= scaleF;
+                    break;
+                }
+                case AttachmentType_Mesh: {
+                    auto& mesh = std::get<MeshAttachment>(attachment.data);
+                    mesh.width *= scaleF;
+                    mesh.height *= scaleF;
+                    // 判断是否加权网格：vertices.size() > uvs.size() 表示加权
+                    bool weighted = mesh.vertices.size() > mesh.uvs.size();
+                    if (weighted) {
+                        // 加权网格：[boneCount, boneIdx, weight, x, y, ...] 循环
+                        // 只缩放 x, y 坐标
+                        size_t i = 0;
+                        while (i < mesh.vertices.size()) {
+                            int boneCount = static_cast<int>(mesh.vertices[i]);
+                            i++;
+                            for (int j = 0; j < boneCount && i < mesh.vertices.size(); j++) {
+                                i++; // bone index
+                                i++; // weight
+                                if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // x
+                                if (i < mesh.vertices.size()) mesh.vertices[i++] *= scaleF; // y
+                            }
+                        }
+                    } else {
+                        // 非加权网格：[x, y, x, y, ...] 直接缩放所有坐标
+                        for (size_t i = 0; i < mesh.vertices.size(); i++) {
+                            mesh.vertices[i] *= scaleF;
+                        }
+                    }
+                    break;
+                }
+                case AttachmentType_Linkedmesh: {
+                    auto& linkedMesh = std::get<LinkedmeshAttachment>(attachment.data);
+                    linkedMesh.width *= scaleF;
+                    linkedMesh.height *= scaleF;
+                    break;
+                }
+                case AttachmentType_Boundingbox: {
+                    auto& bbox = std::get<BoundingboxAttachment>(attachment.data);
+                    if (!bbox.vertices.empty()) {
+                        for (size_t i = 0; i < bbox.vertices.size(); i++) {
+                            bbox.vertices[i] *= scaleF;
+                        }
+                    }
+                    break;
+                }
+                case AttachmentType_Path: {
+                    auto& path = std::get<PathAttachment>(attachment.data);
+                    if (!path.vertices.empty()) {
+                        for (size_t i = 0; i < path.vertices.size(); i++) {
+                            path.vertices[i] *= scaleF;
+                        }
+                    }
+                    if (!path.lengths.empty()) {
+                        for (size_t i = 0; i < path.lengths.size(); i++) {
+                            path.lengths[i] *= scaleF;
+                        }
+                    }
+                    break;
+                }
+                case AttachmentType_Clipping: {
+                    auto& clipping = std::get<ClippingAttachment>(attachment.data);
+                    if (!clipping.vertices.empty()) {
+                        for (size_t i = 0; i < clipping.vertices.size(); i++) {
+                            clipping.vertices[i] *= scaleF;
+                        }
+                    }
+                    break;
+                }
+                case AttachmentType_Point: {
+                    auto& point = std::get<PointAttachment>(attachment.data);
+                    point.x *= scaleF;
+                    point.y *= scaleF;
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    // Skeleton 整体尺寸恢复到设计尺寸（反向缩放）
+    data.width *= invScaleF;
+    data.height *= invScaleF;
+}
+
 bool convertFile(const std::string& inputFile, const std::string& outputFile, 
                 FileFormat inputFormat, FileFormat outputFormat, 
                 SpineVersion inputVersion, SpineVersion outputVersion, 
                 const std::string& outputVersionString,
-                bool removeCurveOption) {
+                bool removeCurveOption,
+                double atlasScale) {
     
     try {
         // Read input file
@@ -244,6 +365,13 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
             belowOrEqualVersion(outputVersion, SpineVersion::Version41)) {
             std::cout << "Converting from 4.2 to below 4.2, adjusting constraint order...\n"; 
             convertOrder42ToBelow(skelData);
+        }
+        
+        // 应用 Atlas scale 因子到 skel 数据
+        if (std::abs(atlasScale - 1.0) >= 1e-9) {
+            std::cout << "Applying atlas scale factor " << atlasScale << " to skeleton data...\n";
+            applyAtlasScale(skelData, atlasScale);
+            std::cout << "NOTE: Please use original atlas images WITHOUT scaling.\n";
         }
         
         // Write data using output version
@@ -407,9 +535,10 @@ void printUsage(const char* programName) {
     std::cout << "  .json       Spine JSON format\n";
     std::cout << "  .skel       Spine binary (SKEL) format\n\n";
     std::cout << "Options:\n";
-    std::cout << "  -v          Output version (must be complete: x.y.z format)\n";
-    std::cout << "  --remove-curve  Strip animation curves instead of converting between formats\n";
-    std::cout << "  --help      Show this help message\n\n";
+    std::cout << "  -v                 Output version (must be complete: x.y.z format)\n";
+    std::cout << "  --remove-curve     Strip animation curves instead of converting between formats\n";
+    std::cout << "  --atlas-scale <v>  Apply atlas scale factor to skel data (avoids image resizing precision loss)\n";
+    std::cout << "  --help             Show this help message\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName << " input.skel output.json\n";
     std::cout << "  " << programName << " input.json output.skel\n";
@@ -479,6 +608,22 @@ ConversionOptions parseArguments(int argc, char* argv[]) {
             options.help = true;
         } else if (arg == "--remove-curve") {
             options.removeCurve = true;
+        } else if (arg == "--atlas-scale") {
+            if (i + 1 < argc) {
+                try {
+                    options.atlasScale = std::stod(argv[++i]);
+                    if (options.atlasScale <= 0.0) {
+                        std::cerr << "Error: --atlas-scale must be positive\n";
+                        options.help = true;
+                    }
+                } catch (...) {
+                    std::cerr << "Error: Invalid value for --atlas-scale\n";
+                    options.help = true;
+                }
+            } else {
+                std::cerr << "Error: --atlas-scale requires a numeric argument\n";
+                options.help = true;
+            }
         } else {
             std::cerr << "Warning: Unknown option: " << arg << "\n";
         }
@@ -531,7 +676,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Converting from " << (options.inputFormat == FileFormat::Json ? "JSON" : "SKEL") 
                   << " to " << (options.outputFormat == FileFormat::Json ? "JSON" : "SKEL") << "...\n";
         
-        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString, options.removeCurve)) {
+        if (convertFile(options.inputFile, options.outputFile, options.inputFormat, options.outputFormat, inputVersion, outputVersion, outputVersionString, options.removeCurve, options.atlasScale)) {
             std::cout << "Conversion completed successfully!\n";
             std::cout << "Output file: " << options.outputFile << "\n";
             return 0;
