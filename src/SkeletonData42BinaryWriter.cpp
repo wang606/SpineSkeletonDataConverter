@@ -175,7 +175,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     if (attachment.path != attachment.name) flags |= 16;
                     if (mesh.color) flags |= 32;
                     if (mesh.sequence) flags |= 64;
-                    if (mesh.vertices.size() > mesh.uvs.size()) flags |= 128;
+                    if (mesh.vertices.size() != mesh.uvs.size()) flags |= 128;
                     break; 
                 }
                 case AttachmentType_Linkedmesh: {
