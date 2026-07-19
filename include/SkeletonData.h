@@ -617,6 +617,7 @@ void convertCurve3xTo4x(SkeletonData& skeleton);
 void convertCurve4xTo3x(SkeletonData& skeleton);
 void removeCurve(SkeletonData& skeleton);
 void convertOrder42ToBelow(SkeletonData& skeleton);
+void convertSpacingMode4xTo3x(SkeletonData& skeleton);
 void normalizeRotateTimeline3xTo4x(SkeletonData& skeleton);
 
 #endif // SKELETONDATA_H

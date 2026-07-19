@@ -220,6 +220,8 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         // 跨版本转换处理
         if (aboveOrEqualVersion(inputVersion, SpineVersion::Version40) &&
             belowOrEqualVersion(outputVersion, SpineVersion::Version38)) {
+            std::cout << "Converting 4.x proportional path spacing mode to length for 3.x...\n";
+            convertSpacingMode4xTo3x(skelData);
             if (removeCurveOption) {
                 std::cout << "Converting from 4.x to 3.x with --remove-curve, stripping curves...\n";
                 removeCurve(skelData);
