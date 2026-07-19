@@ -222,6 +222,8 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
             belowOrEqualVersion(outputVersion, SpineVersion::Version38)) {
             std::cout << "Converting 4.x proportional path spacing mode to length for 3.x...\n";
             convertSpacingMode4xTo3x(skelData);
+            std::cout << "Converting Spine 4.x rotate timelines to 3.x-compatible shortest-path keys...\n";
+            convertRotateTimeline4xTo3x(skelData);
             if (removeCurveOption) {
                 std::cout << "Converting from 4.x to 3.x with --remove-curve, stripping curves...\n";
                 removeCurve(skelData);
@@ -233,7 +235,7 @@ bool convertFile(const std::string& inputFile, const std::string& outputFile,
         if (belowOrEqualVersion(inputVersion, SpineVersion::Version38) &&
             aboveOrEqualVersion(outputVersion, SpineVersion::Version40)) {
             std::cout << "Converting Spine 3.x rotate timelines to 4.x-compatible absolute angles...\n";
-            normalizeRotateTimeline3xTo4x(skelData);
+            convertRotateTimeline3xTo4x(skelData);
             if (removeCurveOption) {
                 std::cout << "Converting from 3.x to 4.x with --remove-curve, stripping curves...\n";
                 removeCurve(skelData);
