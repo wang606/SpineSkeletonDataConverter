@@ -78,6 +78,11 @@ def parse_entry(line: str) -> tuple[str, list[str]]:
     values = [v.strip() for v in value_str.split(',')]
     return key, values
 
+def round_scaled(value: int, scale: float) -> int:
+    if scale == 1.0:
+        return value
+    return round(value / scale)
+
 def read_atlas_data_4x(content: str) -> AtlasData:
     """Parses the content of a 4.x atlas file into an AtlasData object."""
     atlas_data = AtlasData()
@@ -186,8 +191,8 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
         output_lines.append(page.name)
         
         # Apply scale to page size
-        width = int(page.width / page.scale) if page.scale != 1.0 else page.width
-        height = int(page.height / page.scale) if page.scale != 1.0 else page.height
+        width = round_scaled(page.width, page.scale)
+        height = round_scaled(page.height, page.scale)
         output_lines.append(f"size: {width}, {height}")
         
         output_lines.append(f"format: {page.format}")
@@ -207,33 +212,33 @@ def write_atlas_data_3x(atlas_data: AtlasData) -> str:
             
             # Apply scale to all region metrics
             scale = page.scale
-            x = int(region.x / scale) if scale != 1.0 else region.x
-            y = int(region.y / scale) if scale != 1.0 else region.y
+            x = round_scaled(region.x, scale)
+            y = round_scaled(region.y, scale)
             output_lines.append(f"  xy: {x}, {y}")
             
-            r_width = int(region.width / scale) if scale != 1.0 else region.width
-            r_height = int(region.height / scale) if scale != 1.0 else region.height
+            r_width = round_scaled(region.width, scale)
+            r_height = round_scaled(region.height, scale)
             output_lines.append(f"  size: {r_width}, {r_height}")
             
             if region.splits and len(region.splits) >= 4:
                 splits_source = region.splits[:4]
-                splits = [str(int(s / scale)) if scale != 1.0 else str(s) for s in splits_source]
+                splits = [str(round_scaled(s, scale)) for s in splits_source]
                 output_lines.append(f"  split: {', '.join(splits)}")
 
             if region.pads and len(region.pads) >= 4:
                 pads_source = region.pads[:4]
-                pads = [str(int(p / scale)) if scale != 1.0 else str(p) for p in pads_source]
+                pads = [str(round_scaled(p, scale)) for p in pads_source]
                 output_lines.append(f"  pad: {', '.join(pads)}")
             
             orig_width = region.original_width if region.original_width > 0 else region.width
             orig_height = region.original_height if region.original_height > 0 else region.height
             if scale != 1.0:
-                orig_width = int(orig_width / scale)
-                orig_height = int(orig_height / scale)
+                orig_width = round_scaled(orig_width, scale)
+                orig_height = round_scaled(orig_height, scale)
             output_lines.append(f"  orig: {orig_width}, {orig_height}")
             
-            offset_x = int(region.offset_x / scale) if scale != 1.0 else region.offset_x
-            offset_y = int(region.offset_y / scale) if scale != 1.0 else region.offset_y
+            offset_x = round_scaled(region.offset_x, scale)
+            offset_y = round_scaled(region.offset_y, scale)
             output_lines.append(f"  offset: {offset_x}, {offset_y}")
             
             output_lines.append(f"  index: {region.index}")
@@ -264,8 +269,8 @@ def scale_png_images(atlas_data: AtlasData, atlas_dir: Path, output_dir: Path):
         else:
             try:
                 with Image.open(input_path) as img:
-                    new_width = int(img.width / page.scale)
-                    new_height = int(img.height / page.scale)
+                    new_width = max(1, round_scaled(img.width, page.scale))
+                    new_height = max(1, round_scaled(img.height, page.scale))
                     
                     scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     scaled_img.save(output_path)

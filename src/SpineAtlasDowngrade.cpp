@@ -83,6 +83,10 @@ bool parseInt(const std::string& text, int& value) {
 	}
 }
 
+int roundScaled(int value, double scale) {
+	return scale != 1.0 ? static_cast<int>(std::lround(static_cast<double>(value) / scale)) : value;
+}
+
 std::pair<std::string, std::vector<std::string>> parseEntry(const std::string& line) {
 	auto colonPos = line.find(':');
 	if (colonPos == std::string::npos) {
@@ -251,8 +255,8 @@ std::string writeAtlasData3x(const AtlasData& atlas) {
 		output << page.name << '\n';
 
 		double pageScale = page.scale != 0.0 ? page.scale : 1.0;
-		int width = page.scale != 1.0 ? static_cast<int>(page.width / pageScale) : page.width;
-		int height = page.scale != 1.0 ? static_cast<int>(page.height / pageScale) : page.height;
+		int width = roundScaled(page.width, pageScale);
+		int height = roundScaled(page.height, pageScale);
 		output << "size: " << width << ", " << height << '\n';
 
 		output << "format: " << page.format << '\n';
@@ -271,12 +275,12 @@ std::string writeAtlasData3x(const AtlasData& atlas) {
 			}
 
 			double scale = page.scale != 0.0 ? page.scale : 1.0;
-			int x = scale != 1.0 ? static_cast<int>(region.x / scale) : region.x;
-			int y = scale != 1.0 ? static_cast<int>(region.y / scale) : region.y;
+			int x = roundScaled(region.x, scale);
+			int y = roundScaled(region.y, scale);
 			output << "  xy: " << x << ", " << y << '\n';
 
-			int regionWidth = scale != 1.0 ? static_cast<int>(region.width / scale) : region.width;
-			int regionHeight = scale != 1.0 ? static_cast<int>(region.height / scale) : region.height;
+			int regionWidth = roundScaled(region.width, scale);
+			int regionHeight = roundScaled(region.height, scale);
 			output << "  size: " << regionWidth << ", " << regionHeight << '\n';
 
 			if (!region.splits.empty() && region.splits.size() >= 4) {
@@ -284,7 +288,7 @@ std::string writeAtlasData3x(const AtlasData& atlas) {
 				for (size_t idx = 0; idx < 4; ++idx) {
 					int val = region.splits[idx];
 					if (scale != 1.0) {
-						val = static_cast<int>(val / scale);
+						val = roundScaled(val, scale);
 					}
 					output << val;
 					if (idx < 3) {
@@ -299,7 +303,7 @@ std::string writeAtlasData3x(const AtlasData& atlas) {
 				for (size_t idx = 0; idx < 4; ++idx) {
 					int val = region.pads[idx];
 					if (scale != 1.0) {
-						val = static_cast<int>(val / scale);
+						val = roundScaled(val, scale);
 					}
 					output << val;
 					if (idx < 3) {
@@ -312,13 +316,13 @@ std::string writeAtlasData3x(const AtlasData& atlas) {
 			int origWidth = region.originalWidth > 0 ? region.originalWidth : region.width;
 			int origHeight = region.originalHeight > 0 ? region.originalHeight : region.height;
 			if (scale != 1.0) {
-				origWidth = static_cast<int>(origWidth / scale);
-				origHeight = static_cast<int>(origHeight / scale);
+				origWidth = roundScaled(origWidth, scale);
+				origHeight = roundScaled(origHeight, scale);
 			}
 			output << "  orig: " << origWidth << ", " << origHeight << '\n';
 
-			int offsetX = scale != 1.0 ? static_cast<int>(region.offsetX / scale) : region.offsetX;
-			int offsetY = scale != 1.0 ? static_cast<int>(region.offsetY / scale) : region.offsetY;
+			int offsetX = roundScaled(region.offsetX, scale);
+			int offsetY = roundScaled(region.offsetY, scale);
 			output << "  offset: " << offsetX << ", " << offsetY << '\n';
 
 			output << "  index: " << region.index << '\n';
