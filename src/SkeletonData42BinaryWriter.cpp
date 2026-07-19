@@ -167,7 +167,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                 }
                 case AttachmentType_Boundingbox: {
                     const BoundingboxAttachment& box = std::get<BoundingboxAttachment>(attachment.data);
-                    if (box.vertices.size() > box.vertexCount * 2) flags |= 16;
+                    if (box.vertices.size() != box.vertexCount * 2) flags |= 16;
                     break;
                 }
                 case AttachmentType_Mesh: {
@@ -190,12 +190,12 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     const PathAttachment& path = std::get<PathAttachment>(attachment.data);
                     if (path.closed) flags |= 16;
                     if (path.constantSpeed) flags |= 32;
-                    if (path.vertices.size() > path.vertexCount * 2) flags |= 64;
+                    if (path.vertices.size() != path.vertexCount * 2) flags |= 64;
                     break; 
                 }
                 case AttachmentType_Clipping: {
                     const ClippingAttachment& clipping = std::get<ClippingAttachment>(attachment.data);
-                    if (clipping.vertices.size() > clipping.vertexCount * 2) flags |= 16;
+                    if (clipping.vertices.size() != clipping.vertexCount * 2) flags |= 16;
                     break;
                 }
             }

@@ -159,7 +159,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                 case AttachmentType_Boundingbox: {
                     const BoundingboxAttachment& box = std::get<BoundingboxAttachment>(attachment.data);
                     writeVarint(binary, box.vertexCount, true);
-                    writeVertices(binary, box.vertices, box.vertices.size() > box.vertexCount * 2);
+                    writeVertices(binary, box.vertices, box.vertices.size() != box.vertexCount * 2);
                     if (skeletonData.nonessential) {
                         if (box.color) writeColor(binary, box.color.value());
                         else writeColor(binary, Color{0xff, 0xff, 0xff, 0xff});
@@ -176,7 +176,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     writeVarint(binary, vertexCount, true);
                     writeFloatArray(binary, mesh.uvs);
                     writeShortArray(binary, mesh.triangles);
-                    writeVertices(binary, mesh.vertices, mesh.vertices.size() > vertexCount * 2);
+                    writeVertices(binary, mesh.vertices, mesh.vertices.size() != vertexCount * 2);
                     writeVarint(binary, mesh.hullLength, true);
                     writeSequence(binary, mesh.sequence);
                     if (skeletonData.nonessential) {
@@ -207,7 +207,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     writeBoolean(binary, path.closed);
                     writeBoolean(binary, path.constantSpeed);
                     writeVarint(binary, path.vertexCount, true);
-                    writeVertices(binary, path.vertices, path.vertices.size() > path.vertexCount * 2);
+                    writeVertices(binary, path.vertices, path.vertices.size() != path.vertexCount * 2);
                     writeFloatArray(binary, path.lengths); 
                     if (skeletonData.nonessential) {
                         if (path.color) writeColor(binary, path.color.value());
@@ -237,7 +237,7 @@ void writeSkin(Binary& binary, const Skin& skin, const SkeletonData& skeletonDat
                     }
                     writeVarint(binary, slotIndex, true);
                     writeVarint(binary, clipping.vertexCount, true);
-                    writeVertices(binary, clipping.vertices, clipping.vertices.size() > clipping.vertexCount * 2);
+                    writeVertices(binary, clipping.vertices, clipping.vertices.size() != clipping.vertexCount * 2);
                     if (skeletonData.nonessential) {
                         if (clipping.color) writeColor(binary, clipping.color.value());
                         else writeColor(binary, Color{0xff, 0xff, 0xff, 0xff});
