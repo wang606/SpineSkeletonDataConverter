@@ -53,10 +53,13 @@ void convertBezierCurve3xTo4x(BezierCurve& bezier) {
 void convertBezierCurve4xTo3x(BezierCurve& bezier) {
     float timeRange = bezier.x2 - bezier.x1;
     float valueRange = bezier.y2 - bezier.y1;
-    bezier.cx1 = timeRange ? (bezier.cx1 - bezier.x1) / timeRange : 0.0f;
-    bezier.cy1 = valueRange ? (bezier.cy1 - bezier.y1) / valueRange : 0.0f;
-    bezier.cx2 = timeRange ? (bezier.cx2 - bezier.x1) / timeRange : 1.0f;
-    bezier.cy2 = valueRange ? (bezier.cy2 - bezier.y1) / valueRange : 1.0f;
+    // 当 timeRange/valueRange 极小时，归一化会产生极端值（如浮点噪声导致的 7.6e-16），
+    // 需要用阈值保护而非仅检查非零
+    constexpr float epsilon = 0.0001f;
+    bezier.cx1 = std::fabs(timeRange) > epsilon ? (bezier.cx1 - bezier.x1) / timeRange : 0.0f;
+    bezier.cy1 = std::fabs(valueRange) > epsilon ? (bezier.cy1 - bezier.y1) / valueRange : 0.0f;
+    bezier.cx2 = std::fabs(timeRange) > epsilon ? (bezier.cx2 - bezier.x1) / timeRange : 1.0f;
+    bezier.cy2 = std::fabs(valueRange) > epsilon ? (bezier.cy2 - bezier.y1) / valueRange : 1.0f;
 }
 
 void convertTimelineCurve3xTo4x(Timeline& timeline, std::vector<CurveYType> curveYTypes) {
@@ -150,6 +153,7 @@ void convertTimelineCurve4xTo3x(Timeline& timeline, CurveYType curveYType) {
             frame.curve[1] = bezier.cy1;
             frame.curve[2] = bezier.cx2;
             frame.curve[3] = bezier.cy2;
+            frame.curve.resize(4); // 4.x 多分量曲线可能有8+元素，3.x 只需4个
         }
     }
 }
