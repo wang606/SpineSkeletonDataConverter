@@ -1,3 +1,4 @@
+#include <sstream>
 #include "SkeletonData.h"
 
 // json reader
@@ -34,6 +35,7 @@ std::string colorToString(const Color& color, bool hasAlpha) {
 // binary reader
 
 unsigned char readByte(DataInput* input) {
+    if (input->cursor >= input->end) throw std::runtime_error("Unexpected EOF");
     return *input->cursor++;
 }
 
@@ -97,6 +99,9 @@ float readFloat(DataInput* input) {
 OptStr readString(DataInput* input) {
     int length = readVarint(input, true); 
     if (length == 0) return std::nullopt;
+    if (length < 0 || input->cursor + length - 1 > input->end) {
+        throw std::runtime_error("String length out of bounds");
+    }
     std::string string; 
     string.resize(length - 1); 
     memcpy(string.data(), input->cursor, length - 1); 

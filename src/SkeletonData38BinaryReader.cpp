@@ -71,34 +71,34 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
         slotCount = readVarint(input, true);
         skin.name = "default";
     } else {
-        skin.name = readStringRef(input, skeletonData).value();
+        skin.name = readStringRef(input, skeletonData).value_or("");
         for (int i = 0, n = readVarint(input, true); i < n; i++) {
-            skin.bones.push_back(skeletonData->bones[readVarint(input, true)].name.value());
+            skin.bones.push_back(skeletonData->bones[readVarint(input, true)].name.value_or(""));
         }
         for (int i = 0, n = readVarint(input, true); i < n; i++) {
-            skin.ik.push_back(skeletonData->ikConstraints[readVarint(input, true)].name.value());
+            skin.ik.push_back(skeletonData->ikConstraints[readVarint(input, true)].name.value_or(""));
         }
         for (int i = 0, n = readVarint(input, true); i < n; i++) {
-            skin.transform.push_back(skeletonData->transformConstraints[readVarint(input, true)].name.value());
+            skin.transform.push_back(skeletonData->transformConstraints[readVarint(input, true)].name.value_or(""));
         }
         for (int i = 0, n = readVarint(input, true); i < n; i++) {
-            skin.path.push_back(skeletonData->pathConstraints[readVarint(input, true)].name.value());
+            skin.path.push_back(skeletonData->pathConstraints[readVarint(input, true)].name.value_or(""));
         }
         slotCount = readVarint(input, true);
     }
     for (int i = 0; i < slotCount; i++) {
-        std::string slotName = skeletonData->slots[readVarint(input, true)].name.value();
+        std::string slotName = skeletonData->slots[readVarint(input, true)].name.value_or("");
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
-            std::string attachmentName = readStringRef(input, skeletonData).value();
+            std::string attachmentName = readStringRef(input, skeletonData).value_or("");
             Attachment attachment;
             auto name = readStringRef(input, skeletonData);
-            attachment.name = (name.has_value() && !name->empty()) ? name.value() : attachmentName;
+            attachment.name = (name.has_value() && !name->empty()) ? name.value_or("") : attachmentName;
             attachment.type = static_cast<AttachmentType>(readByte(input));
             switch (attachment.type) {
                 case AttachmentType_Region: {
                     RegionAttachment region; 
                     auto path = readStringRef(input, skeletonData);
-                    attachment.path = (path.has_value() && !path->empty()) ? path.value() : attachment.name;
+                    attachment.path = (path.has_value() && !path->empty()) ? path.value_or("") : attachment.name;
                     region.rotation = readFloat(input);
                     region.x = readFloat(input);
                     region.y = readFloat(input);
@@ -126,7 +126,7 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                 case AttachmentType_Mesh: {
                     MeshAttachment mesh; 
                     auto path = readStringRef(input, skeletonData);
-                    attachment.path = (path.has_value() && !path->empty()) ? path.value() : attachment.name;
+                    attachment.path = (path.has_value() && !path->empty()) ? path.value_or("") : attachment.name;
                     Color color = readColor(input);
                     if (color != Color{0xff, 0xff, 0xff, 0xff}) mesh.color = color;
                     int vertexCount = readVarint(input, true);
@@ -145,11 +145,11 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
                 case AttachmentType_Linkedmesh: {
                     LinkedmeshAttachment linkedMesh; 
                     auto path = readStringRef(input, skeletonData);
-                    attachment.path = (path.has_value() && !path->empty()) ? path.value() : attachment.name;
+                    attachment.path = (path.has_value() && !path->empty()) ? path.value_or("") : attachment.name;
                     Color color = readColor(input);
                     if (color != Color{0xff, 0xff, 0xff, 0xff}) linkedMesh.color = color;
                     linkedMesh.skin = readStringRef(input, skeletonData);
-                    linkedMesh.parentMesh = readStringRef(input, skeletonData).value();
+                    linkedMesh.parentMesh = readStringRef(input, skeletonData).value_or("");
                     linkedMesh.timelines = readBoolean(input) ? 1 : 0;
                     if (skeletonData->nonessential) {
                         linkedMesh.width = readFloat(input);
@@ -208,9 +208,9 @@ Skin readSkin(DataInput* input, bool defaultSkin, SkeletonData* skeletonData) {
 
 Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
     Animation animation; 
-    animation.name = readString(input).value();
+    animation.name = readString(input).value_or("");
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
-        std::string slotName = skeletonData->slots[readVarint(input, true)].name.value();
+        std::string slotName = skeletonData->slots[readVarint(input, true)].name.value_or("");
         MultiTimeline slotTimeline; 
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             int timelineType = static_cast<int>(readByte(input));
@@ -261,7 +261,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         animation.slots[slotName] = slotTimeline;
     }
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
-        std::string boneName = skeletonData->bones[readVarint(input, true)].name.value();
+        std::string boneName = skeletonData->bones[readVarint(input, true)].name.value_or("");
         MultiTimeline boneTimeline;
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             int timelineType = static_cast<int>(readByte(input));
@@ -288,7 +288,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         animation.bones[boneName] = boneTimeline;
     }
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
-        std::string ikName = skeletonData->ikConstraints[readVarint(input, true)].name.value();
+        std::string ikName = skeletonData->ikConstraints[readVarint(input, true)].name.value_or("");
         int frameCount = readVarint(input, true);
         Timeline timeline;
         for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -305,7 +305,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         animation.ik[ikName] = timeline;
     }
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
-        std::string transformName = skeletonData->transformConstraints[readVarint(input, true)].name.value();
+        std::string transformName = skeletonData->transformConstraints[readVarint(input, true)].name.value_or("");
         int frameCount = readVarint(input, true);
         Timeline timeline;
         for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -323,7 +323,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         animation.transform[transformName] = timeline;
     }
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
-        std::string pathName = skeletonData->pathConstraints[readVarint(input, true)].name.value();
+        std::string pathName = skeletonData->pathConstraints[readVarint(input, true)].name.value_or("");
         MultiTimeline pathTimeline; 
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
             PathTimelineType timelineType = static_cast<PathTimelineType>(readSByte(input));
@@ -358,9 +358,9 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
     for (int i = 0, n = readVarint(input, true); i < n; i++) {
         std::string skinName = skeletonData->skins[readVarint(input, true)].name; 
         for (int ii = 0, nn = readVarint(input, true); ii < nn; ii++) {
-            std::string slotName = skeletonData->slots[readVarint(input, true)].name.value();
+            std::string slotName = skeletonData->slots[readVarint(input, true)].name.value_or("");
             for (int iii = 0, nnn = readVarint(input, true); iii < nnn; iii++) {
-                std::string attachmentName = readStringRef(input, skeletonData).value();
+                std::string attachmentName = readStringRef(input, skeletonData).value_or("");
                 Timeline attachmentTimeline;
                 int frameCount = readVarint(input, true);
                 for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -388,7 +388,7 @@ Animation readAnimation(DataInput* input, SkeletonData* skeletonData) {
         size_t offsetCount = (size_t) readVarint(input, true);
         for (size_t ii = 0; ii < offsetCount; ii++) {
             frame.offsets.push_back({
-                skeletonData->slots[readVarint(input, true)].name.value(),
+                skeletonData->slots[readVarint(input, true)].name.value_or(""),
                 readVarint(input, true)
             });
         }
@@ -420,9 +420,9 @@ SkeletonData readBinaryData(const Binary& binary) {
     input.cursor = binary.data(); 
     input.end = binary.data() + binary.size();
 
-    skeletonData.hashString = readString(&input).value();
-    skeletonData.hash = base64ToUint64(skeletonData.hashString.value());
-    skeletonData.version = readString(&input).value();
+    skeletonData.hashString = readString(&input).value_or("");
+    skeletonData.hash = base64ToUint64(skeletonData.hashString.value_or(""));
+    skeletonData.version = readString(&input).value_or("");
 
     skeletonData.x = readFloat(&input); 
     skeletonData.y = readFloat(&input);
@@ -433,13 +433,13 @@ SkeletonData readBinaryData(const Binary& binary) {
 
     if (skeletonData.nonessential) {
         skeletonData.fps = readFloat(&input); 
-        skeletonData.imagesPath = readString(&input).value(); 
-        skeletonData.audioPath = readString(&input).value();
+        skeletonData.imagesPath = readString(&input).value_or(""); 
+        skeletonData.audioPath = readString(&input).value_or("");
     }
 
     int numStrings = readVarint(&input, true);
     for (int i = 0; i < numStrings; i++)
-        skeletonData.strings.push_back(readString(&input).value());
+        skeletonData.strings.push_back(readString(&input).value_or(""));
     
     /* Bones */
     int numBones = readVarint(&input, true);
@@ -493,7 +493,7 @@ SkeletonData readBinaryData(const Binary& binary) {
         ikData.skinRequired = readBoolean(&input);
         int bonesCount = readVarint(&input, true);
         for (int ii = 0; ii < bonesCount; ii++)
-            ikData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value());
+            ikData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value_or(""));
         ikData.target = skeletonData.bones[readVarint(&input, true)].name;
         ikData.mix = readFloat(&input);
         ikData.softness = readFloat(&input);
@@ -513,7 +513,7 @@ SkeletonData readBinaryData(const Binary& binary) {
         transformData.skinRequired = readBoolean(&input);
         int bonesCount = readVarint(&input, true);
         for (int ii = 0; ii < bonesCount; ii++)
-            transformData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value());
+            transformData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value_or(""));
         transformData.target = skeletonData.bones[readVarint(&input, true)].name;
         transformData.local = readBoolean(&input);
         transformData.relative = readBoolean(&input);
@@ -541,7 +541,7 @@ SkeletonData readBinaryData(const Binary& binary) {
         pathData.skinRequired = readBoolean(&input);
         int bonesCount = readVarint(&input, true);
         for (int ii = 0; ii < bonesCount; ii++)
-            pathData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value());
+            pathData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value_or(""));
         pathData.target = skeletonData.slots[readVarint(&input, true)].name;
         pathData.positionMode = static_cast<PositionMode>(readVarint(&input, true));
         pathData.spacingMode = static_cast<SpacingMode>(readVarint(&input, true));
@@ -566,7 +566,7 @@ SkeletonData readBinaryData(const Binary& binary) {
     int eventCount = readVarint(&input, true);
     for (int i = 0; i < eventCount; i++) {
         EventData eventData; 
-        eventData.name = readStringRef(&input, &skeletonData).value();
+        eventData.name = readStringRef(&input, &skeletonData).value_or("");
         eventData.intValue = readVarint(&input, false);
         eventData.floatValue = readFloat(&input);
         eventData.stringValue = readString(&input);
