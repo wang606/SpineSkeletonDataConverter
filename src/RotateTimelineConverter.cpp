@@ -19,11 +19,12 @@ float normalizeRotationDelta(float delta) {
     return delta;
 }
 
-float resolveAmbiguousHalfTurn(float delta, float previousDelta) {
+// The 3.x runtimes interpolate a rotate key pair along r - (16384 - (int)(16384.499999999996 - r / 360)) * 360,
+// which maps every exact half-turn (180, -180, 540, ...) to -180. Match it, or a spin built from
+// 180-degree keys plays in the opposite direction after conversion.
+float resolveAmbiguousHalfTurn(float delta, float /*previousDelta*/) {
     if (std::fabs(std::fabs(delta) - 180.0f) > epsilon) return delta;
-    if (previousDelta > 0.0f) return 180.0f;
-    if (previousDelta < 0.0f) return -180.0f;
-    return 180.0f;
+    return -180.0f;
 }
 
 void convertRotateTimeline3xTo4x(Timeline& timeline) {
