@@ -1,5 +1,10 @@
 #include "SkeletonData.h"
 
+#include <cmath>
+#include <cstring>
+#include <iomanip>
+#include <sstream>
+
 // json reader
 
 Color stringToColor(const std::string& str, bool hasAlpha) {
