@@ -199,12 +199,16 @@ std::string formatNumber(double v) {
         }
         return oss.str();
     }
+    // 4 decimals for values >= 1 (Spine's own exports use up to 4; 2 shifted key times by up to 5 ms).
     if (std::fabs(v) >= 1.0) {
-        oss << std::fixed << std::setprecision(2) << v;
+        oss << std::fixed << std::setprecision(4) << v;
     } else {
         oss << std::fixed << std::setprecision(5) << v;
     }
-    return oss.str();
+    std::string s = oss.str();
+    s.erase(s.find_last_not_of('0') + 1);
+    if (!s.empty() && s.back() == '.') s.pop_back();
+    return s;
 }
 
 void dumpJsonToOss(const Json& j, std::ostringstream& oss) {
