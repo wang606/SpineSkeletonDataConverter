@@ -1,0 +1,60 @@
+name: build executable file
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger when push tag start with v (etc. v0.1.0)
+  workflow_dispatch: # Manual
+
+jobs:
+  build:
+    name: Build (${{ matrix.build-type }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [x64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -S . -B build -A ${{ matrix.build-type }}
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Collect executables
+        run: |
+          New-Item -ItemType Directory -Path release_assets | Out-Null
+          Copy-Item build/Release/SpineSkeletonDataConverter.exe release_assets/
+          Copy-Item build/Release/SpineAtlasDowngrade.exe release_assets/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpineSkeletonDataConverter-${{ matrix.build-type }}
+          path: release_assets/
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SpineSkeletonDataConverter-x64
+          path: release_assets/
+
+      - name: Create Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release_assets/SpineSkeletonDataConverter.exe
+            release_assets/SpineAtlasDowngrade.exe
