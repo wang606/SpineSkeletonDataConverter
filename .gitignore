@@ -1,3 +1,5 @@
 .vscode
 build
 test_examples
+debug-build
+asan-build
