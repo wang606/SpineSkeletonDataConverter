@@ -405,6 +405,14 @@ SkeletonData readBinaryData(const Binary& binary) {
     skeletonData.hash = base64ToUint64(skeletonData.hashString.value());
     skeletonData.version = readString(&input).value();
 
+    // Spine 3.5.35 predates the four-byte dark-color field in slot data.
+    // Treating the following attachment name as a color shifts the remaining
+    // stream and eventually produces invalid bone indexes.
+    const bool hasSlotDarkColor = skeletonData.version.value() != "3.5.35";
+    // This older layout also stores transform offsets immediately after the
+    // target bone, before the local/relative flags were introduced.
+    const bool hasTransformLocalRelative = skeletonData.version.value() != "3.5.35";
+
     skeletonData.width = readFloat(&input);
     skeletonData.height = readFloat(&input);
 
@@ -445,12 +453,14 @@ SkeletonData readBinaryData(const Binary& binary) {
         slotData.bone = skeletonData.bones[readVarint(&input, true)].name;
         Color color = readColor(&input);
         if (color != Color{0xff, 0xff, 0xff, 0xff}) slotData.color = color;
-        unsigned char r = readByte(&input);
-        unsigned char g = readByte(&input);
-        unsigned char b = readByte(&input);
-        unsigned char a = readByte(&input);
-        if (!(r == 0xff && g == 0xff && b == 0xff && a == 0xff)) {
-            slotData.darkColor = Color{ r, g, b, a }; 
+        if (hasSlotDarkColor) {
+            unsigned char r = readByte(&input);
+            unsigned char g = readByte(&input);
+            unsigned char b = readByte(&input);
+            unsigned char a = readByte(&input);
+            if (!(r == 0xff && g == 0xff && b == 0xff && a == 0xff)) {
+                slotData.darkColor = Color{ r, g, b, a };
+            }
         }
         slotData.attachmentName = readString(&input);
         slotData.blendMode = static_cast<BlendMode>(readVarint(&input, true));
@@ -482,8 +492,10 @@ SkeletonData readBinaryData(const Binary& binary) {
         for (int ii = 0; ii < bonesCount; ii++)
             transformData.bones.push_back(skeletonData.bones[readVarint(&input, true)].name.value());
         transformData.target = skeletonData.bones[readVarint(&input, true)].name;
-        transformData.local = readBoolean(&input);
-        transformData.relative = readBoolean(&input);
+        if (hasTransformLocalRelative) {
+            transformData.local = readBoolean(&input);
+            transformData.relative = readBoolean(&input);
+        }
         transformData.offsetRotation = readFloat(&input);
         transformData.offsetX = readFloat(&input);
         transformData.offsetY = readFloat(&input);
